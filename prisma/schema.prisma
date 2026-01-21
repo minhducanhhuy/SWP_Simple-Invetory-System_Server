@@ -1,0 +1,248 @@
+// 1. Khai báo Client (giữ nguyên)
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 2. Khai báo Database (dùng postgresql)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Common Enums (Chuẩn hóa các trạng thái)
+enum Role {
+  ADMIN
+  WAREHOUSE_STAFF
+  STAFF
+  MANAGER
+  SALESPERSON
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLE
+  BANNED
+}
+
+enum ProductStatus {
+  ACTIVE
+  DISABLE      // Ngừng kinh doanh
+}
+
+enum PartnerType {
+  SUPPLIER      // Nhà cung cấp
+  CUSTOMER      // Khách hàng
+}
+
+// Loại giao dịch: Nhập, Xuất hay Kiểm kê
+enum TransactionType {
+  INBOUND       // Tăng kho (Nhập mua, Khách trả, Nhập khác)
+  OUTBOUND      // Giảm kho (Bán hàng, Trả NCC, Hủy hàng)
+  AUDIT         // Kiểm kê (Cân bằng kho)
+}
+
+// Lý do hệ thống (Cố định để code logic)
+enum TransactionReason {
+  PURCHASE_ORDER      // Nhập hàng từ NCC [cite: 11]
+  CUSTOMER_RETURN     // Khách trả hàng [cite: 24]
+  SALES_ORDER         // Bán hàng [cite: 12]
+  RETURN_TO_VENDOR    // Trả hàng NCC [cite: 25]
+  DAMAGE_EXPIRY       // Xuất hủy (Hỏng/Hết hạn) [cite: 26]
+  INTERNAL_USE        // Xuất dùng nội bộ [cite: 13]
+  INVENTORY_COUNT     // Kiểm kê định kỳ [cite: 17]
+  TRANSFER            // Chuyển kho [cite: 14]
+}
+
+// ==========================================
+// 2. Authentication & Users
+// ==========================================
+
+model User {
+  id          String      @id @default(uuid())
+  username    String      @unique
+  email       String      @unique
+  password    String      // Hashed
+  name        String
+  role        Role        @default(STAFF)
+  status      UserStatus  @default(ACTIVE)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?   // Soft Delete
+
+  transactions InventoryTransaction[] // Người này đã tạo những phiếu nào [cite: 32]
+
+  @@map("users")
+}
+
+// ==========================================
+// 3. Catalogs (Danh mục động - Owner quản lý)
+// ==========================================
+
+// Danh mục sản phẩm (Điện tử, Thực phẩm...) [cite: 8]
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  products    Product[]
+
+  @@map("categories")
+}
+
+// Đơn vị tính (Cái, Hộp, Thùng...) 
+model Unit {
+  id          String    @id @default(uuid())
+  name        String    // Ví dụ: "Hộp"
+  products    Product[]
+
+  @@map("units")
+}
+
+// Vị trí/Phân khu (Kệ A, Kệ B, Kho lạnh...)
+// Trả lời câu hỏi của bạn: Nên tách bảng để Owner tạo danh sách vị trí chuẩn.
+model Location {
+  id          String    @id @default(uuid())
+  name        String    // Ví dụ: "Kệ A1"
+  products    Product[]
+
+  @@map("locations")
+}
+
+// ==========================================
+// 4. Product Management
+// ==========================================
+
+model Product {
+  id            String    @id @default(uuid())
+  sku           String    @unique // Stock Keeping Unit [cite: 6]
+  name          String
+  description   String?
+  imageUrl      String?
+  
+  // Quan hệ danh mục
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id])
+  
+  unitId        String
+  unit          Unit      @relation(fields: [unitId], references: [id])
+  
+  locationId    String?
+  location      Location? @relation(fields: [locationId], references: [id])
+
+  // Giá và Tồn kho
+  costPrice     Decimal   @default(0) @db.Decimal(15, 2) // Giá vốn hiện tại (cập nhật theo MAC hoặc bình quân)
+  sellPrice     Decimal   @default(0) @db.Decimal(15, 2) // Giá bán niêm yết
+  
+  minStockLevel Int       @default(10) // Cảnh báo tồn kho tối thiểu [cite: 16]
+  totalStock    Int       @default(0)  // Tổng tồn kho (Aggregate từ bảng Stock)
+  
+  status        ProductStatus @default(ACTIVE)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // Soft Delete [cite: 9]
+
+  // Relations
+  transactionItems TransactionItem[]
+  stocks           ProductStock[] // Chi tiết tồn kho theo lô/date
+
+  @@map("products")
+}
+
+// Bảng lưu trữ tồn kho chi tiết (Để xử lý Hạn sử dụng)
+model ProductStock {
+  id          String    @id @default(uuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  
+  quantity    Int       // Số lượng thực tế của lô này
+  expiryDate  DateTime? // Hạn sử dụng của lô này
+  batchCode   String?   // Mã lô nhập (nếu có)
+
+  @@unique([productId, expiryDate, batchCode]) // Một SP + 1 Date chỉ có 1 dòng
+  @@map("product_stocks")
+}
+
+// ==========================================
+// 5. Partners (Nhà cung cấp & Khách hàng)
+// ==========================================
+// Gộp chung 2 bảng theo ý bạn [cite: 20, 22]
+
+model Partner {
+  id          String      @id @default(uuid())
+  name        String
+  phone       String?
+  address     String?
+  email       String?
+  type        PartnerType // SUPPLIER hoặc CUSTOMER
+  
+  // Công nợ
+  debtAmount  Decimal     @default(0) @db.Decimal(15, 2) // Tiền mình nợ NCC hoặc Khách nợ mình [cite: 21]
+  
+  createdAt   DateTime    @default(now())
+  transactions InventoryTransaction[]
+
+  @@map("partners")
+}
+
+// ==========================================
+// 6. Transactions (Phiếu Xuất/Nhập/Kiểm kê)
+// ==========================================
+
+// Transaction Header: Thông tin chung của phiếu
+model InventoryTransaction {
+  id            String            @id @default(uuid())
+  code          String            @unique // Mã phiếu: PN001, PX001...
+  
+  type          TransactionType   // INBOUND / OUTBOUND / AUDIT
+  reason        TransactionReason // Lý do chi tiết (Mua hàng, Bán hàng...) [cite: 13]
+  
+  // Quan hệ
+  partnerId     String?           // Có thể null nếu là Kiểm kê hoặc Hủy hàng không cần đối tác
+  partner       Partner?          @relation(fields: [partnerId], references: [id])
+  
+  creatorId     String            // Người tạo phiếu
+  creator       User              @relation(fields: [creatorId], references: [id])
+  
+  // Tài chính
+  totalAmount   Decimal           @default(0) @db.Decimal(15, 2) // Tổng giá trị phiếu
+  discount      Decimal           @default(0) @db.Decimal(15, 2) // Chiết khấu (nếu có)
+  finalAmount   Decimal           @default(0) @db.Decimal(15, 2) // Số tiền thực tế
+  
+  note          String?           // Ghi chú
+  status        String            @default("COMPLETED") // DRAFT, COMPLETED, CANCELLED
+  
+  transactionDate DateTime        @default(now()) // Ngày chứng từ
+  createdAt       DateTime        @default(now()) // Ngày tạo trên hệ thống
+
+  items         TransactionItem[]
+
+  @@map("inventory_transactions")
+}
+
+// Transaction Detail: Chi tiết từng sản phẩm trong phiếu [cite: 19]
+model TransactionItem {
+  id            String    @id @default(uuid())
+  
+  transactionId String
+  transaction   InventoryTransaction @relation(fields: [transactionId], references: [id])
+  
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  
+  // Snapshot Data (Lưu cứng dữ liệu lịch sử)
+  productName   String    // Tên SP tại thời điểm giao dịch
+  productSku    String    // SKU tại thời điểm giao dịch
+  
+  quantity      Int       // Số lượng thay đổi (+/-)
+  
+  // Giá: Quan trọng cho báo cáo doanh thu/lợi nhuận
+  actualPrice   Decimal   @default(0) @db.Decimal(15, 2) // Giá thực tế giao dịch (Giá nhập hoặc Giá bán)
+  costPrice     Decimal   @default(0) @db.Decimal(15, 2) // Giá vốn tại thời điểm xuất (để tính lãi lỗ)
+  
+  // Quản lý Hạn sử dụng lúc nhập
+  expiryDate    DateTime? 
+
+  @@map("transaction_items")
+}
