@@ -14,7 +14,7 @@ async function main() {
   // 2. Thực hiện lệnh upsert (Update hoặc Insert)
   const admin = await prisma.user.upsert({
     // Điều kiện tìm kiếm: Tìm user có username là 'admin'
-    where: { username: 'admin' },
+    where: { username: process.env.ADMIN_USERNAME! },
 
     // Nếu tìm thấy: Không làm gì cả (update rỗng)
     update: {},

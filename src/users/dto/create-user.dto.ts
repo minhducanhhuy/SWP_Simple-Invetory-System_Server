@@ -6,7 +6,7 @@ import {
   IsEnum,
   IsOptional,
 } from 'class-validator';
-import { Role, Status } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 export class CreateUserDto {
   @IsString()
@@ -29,6 +29,6 @@ export class CreateUserDto {
   role?: Role; // Mặc định là STAFF nếu không truyền
 
   @IsOptional()
-  @IsEnum(Status)
-  status?: Status;
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 }
