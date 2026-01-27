@@ -49,6 +49,22 @@ model User {
   @@map("users")
 }
 
+// Bảng lưu lời mời (sẽ xóa dòng này sau khi user đăng ký thành công)
+model UserInvitation {
+  id         String     @id @default(uuid())
+  email      String     @unique // Một email chỉ được mời 1 lần tại 1 thời điểm
+  token      String     @unique // Mã bí mật gửi qua mail
+  systemRole SystemRole @default(STAFF) // Role dự kiến gán cho họ
+  
+  // (Optional) Nếu muốn mời thẳng vào làm quản lý kho nào đó thì thêm field này
+  // locationId String? 
+  
+  expiresAt  DateTime   // Link này chỉ sống trong 24h hoặc 48h
+  createdAt  DateTime   @default(now())
+
+  @@map("user_invitations")
+}
+
 model Location {
   id        String   @id @default(uuid())
   code      String   @unique // Mã kho: KHO-HCM, KHO-HN

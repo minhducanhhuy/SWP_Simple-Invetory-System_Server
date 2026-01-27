@@ -1,3 +1,4 @@
+import { SystemRole } from '@prisma/client';
 import {
   IsEmail,
   IsNotEmpty,
@@ -5,13 +6,13 @@ import {
   MinLength,
   IsEnum,
   IsOptional,
+  Matches,
 } from 'class-validator';
-import { Role, UserStatus } from '@prisma/client';
 
 export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  fullName: string;
 
   @IsEmail()
   email: string;
@@ -22,13 +23,23 @@ export class CreateUserDto {
 
   @IsString()
   @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
+  @Matches(/((?=.*\d)|(?=.*\W+))(?=.*[A-Z])(?=.*[a-z]).*$/, {
+    message:
+      'Mật khẩu phải có chữ hoa, chữ thường và ít nhất 1 số hoặc ký tự đặc biệt',
+  })
   password: string;
 
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role; // Mặc định là STAFF nếu không truyền
+  @IsString()
+  @Matches(/^[0-9]{9,11}$/, {
+    message: 'Số điện thoại chỉ được chứa chữ số (9–11 số)',
+  })
+  phone: string;
 
+  // 2. Thêm trường systemRole (Optional)
+  // Nếu gửi lên thì phải đúng là: "ADMIN", "STAFF" hoặc "OWNER"
   @IsOptional()
-  @IsEnum(UserStatus)
-  status?: UserStatus;
+  @IsEnum(SystemRole, {
+    message: 'Role hệ thống không hợp lệ (OWNER, ADMIN, STAFF)',
+  })
+  systemRole?: SystemRole;
 }
