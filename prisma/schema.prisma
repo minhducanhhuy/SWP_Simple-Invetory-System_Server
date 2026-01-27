@@ -11,17 +11,16 @@ datasource db {
 // 1. QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN ĐA KHO (User & Auth)
 // =========================================================
 
-enum SystemRole {
-  OWNER // Chủ doanh nghiệp (Full quyền)
-  ADMIN // Quản trị viên hệ thống
-  STAFF // Nhân viên bình thường (quyền hạn phụ thuộc vào Location)
-}
-
-enum LocationRole {
-  MANAGER         // Quản lý kho
-  WAREHOUSE_STAFF // Nhân viên kho (chỉ nhập xuất)
-  SALESPERSON     // Nhân viên bán hàng (chỉ tạo đơn bán)
-  STAFF           // Nhân viên chung
+enum Role {
+  // Nhóm Admin
+  OWNER
+  ADMIN
+  
+  // Nhóm Vận hành (Chức danh cố định của nhân viên)
+  MANAGER          // Quản lý (Khu vực hoặc Cửa hàng)
+  WAREHOUSE_STAFF  // Thủ kho
+  SALESPERSON      // Nhân viên bán hàng
+  STAFF            // Nhân viên chung
 }
 
 model User {
@@ -32,11 +31,11 @@ model User {
   email     String?    @unique
   phone     String?
   
-  // Role cấp hệ thống
-  systemRole SystemRole @default(STAFF)
+    // QUYỀN HẠN CỐ ĐỊNH CỦA USER
+  role      Role     @default(STAFF)
 
-  // User thuộc về những kho nào?
-  locations UserLocation[]
+  // USER ĐƯỢC PHÉP VÀO NHỮNG KHO NÀO?
+  assignedLocations UserLocation[]
 
   // Các phiếu đã tạo (Audit log)
   createdTickets  StockTicket[]
@@ -49,6 +48,22 @@ model User {
   @@map("users")
 }
 
+// Bảng lưu lời mời (sẽ xóa dòng này sau khi user đăng ký thành công)
+model UserInvitation {
+  id         String     @id @default(uuid())
+  email      String     @unique // Một email chỉ được mời 1 lần tại 1 thời điểm
+  token      String     @unique // Mã bí mật gửi qua mail
+  role       Role @default(STAFF) // Role dự kiến gán cho họ
+  
+  // (Optional) Nếu muốn mời thẳng vào làm quản lý kho nào đó thì thêm field này
+  // locationId String? 
+  
+  expiresAt  DateTime   // Link này chỉ sống trong 24h hoặc 48h
+  createdAt  DateTime   @default(now())
+
+  @@map("user_invitations")
+}
+
 model Location {
   id        String   @id @default(uuid())
   code      String   @unique // Mã kho: KHO-HCM, KHO-HN
@@ -56,7 +71,7 @@ model Location {
   address   String?
   
   // Nhân viên làm việc tại kho này
-  users     UserLocation[]
+  assignedUsers UserLocation[]
   
   // Tồn kho tại kho này (Quan trọng)
   inventory InventoryItem[]
@@ -78,8 +93,8 @@ model UserLocation {
   locationId String
   location   Location     @relation(fields: [locationId], references: [id])
   
-  // Role cụ thể tại kho này
-  role       LocationRole @default(STAFF)
+
+   assignedAt DateTime @default(now())
 
   @@unique([userId, locationId]) // 1 user chỉ có 1 role tại 1 kho
   @@map("user_locations")
