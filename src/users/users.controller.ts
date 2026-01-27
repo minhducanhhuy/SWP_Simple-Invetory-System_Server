@@ -11,8 +11,8 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard'; // Sẽ tạo ở bước sau
-import { SystemRole } from '@prisma/client';
-import { RequireSystemRole } from 'src/auth/roles.decorator';
+import { Roles } from 'src/auth/roles.decorator';
+import { Role } from '@prisma/client';
 
 @Controller('users')
 export class UsersController {
@@ -20,7 +20,7 @@ export class UsersController {
 
   // Chỉ người đã đăng nhập mới sửa được (Guard)
   @UseGuards(JwtAuthGuard)
-  @RequireSystemRole(SystemRole.ADMIN, SystemRole.OWNER)
+  @Roles(Role.ADMIN)
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);

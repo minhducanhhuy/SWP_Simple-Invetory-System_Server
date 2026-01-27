@@ -1,4 +1,4 @@
-import { PrismaClient, SystemRole, LocationRole } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -6,11 +6,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Bắt đầu khởi tạo dữ liệu mẫu (Seeding)...');
 
-  // 1. Tạo Mật khẩu hash chung
+  // 1. Tạo Mật khẩu hash chung (123456)
   const password = await bcrypt.hash('123456aA@', 10);
 
   // 2. Tạo 2 Kho (Locations)
-  // Dùng upsert để nếu chạy lại seed nhiều lần không bị lỗi trùng lặp
   const khoHN = await prisma.location.upsert({
     where: { code: 'KHO-HN' },
     update: {},
@@ -31,10 +30,11 @@ async function main() {
     },
   });
 
-  console.log('✅ Đã tạo 2 kho: Hà Nội & HCM');
+  console.log(`✅ Đã tạo 2 kho: ${khoHN.name} & ${khoHCM.name}`);
 
   // 3. Tạo User: OWNER (Trùm cuối)
-  // Owner mặc định có quyền MANAGER ở tất cả các kho để test cho dễ
+  // Logic cũ: Owner có quyền tối cao.
+  // Logic mới: Role = OWNER. Vẫn gán vào cả 2 kho để tiện test các API có check locationId.
   await prisma.user.upsert({
     where: { username: 'owner' },
     update: {},
@@ -43,17 +43,18 @@ async function main() {
       email: 'owner@example.com',
       password,
       fullName: 'Ông Chủ',
-      systemRole: SystemRole.OWNER,
-      locations: {
+      role: Role.OWNER, // Role nằm trực tiếp ở User
+      assignedLocations: {
         create: [
-          { locationId: khoHN.id, role: LocationRole.MANAGER },
-          { locationId: khoHCM.id, role: LocationRole.MANAGER },
+          { locationId: khoHN.id }, // Không cần field 'role' ở đây nữa
+          { locationId: khoHCM.id },
         ],
       },
     },
   });
 
   // 4. Tạo User: ADMIN (Quản trị hệ thống)
+  // Admin được gán vào kho HN để quản lý.
   await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
@@ -62,11 +63,9 @@ async function main() {
       email: 'admin@example.com',
       password,
       fullName: 'Admin Hệ Thống',
-      systemRole: SystemRole.ADMIN,
-      locations: {
-        create: [
-          { locationId: khoHN.id, role: LocationRole.MANAGER }, // Admin cũng quản lý kho HN
-        ],
+      role: Role.ADMIN,
+      assignedLocations: {
+        create: [{ locationId: khoHN.id }],
       },
     },
   });
@@ -84,9 +83,9 @@ async function main() {
       email: 'manager.hn@example.com',
       password,
       fullName: 'Trưởng Kho Hà Nội',
-      systemRole: SystemRole.STAFF, // Role hệ thống là Staff
-      locations: {
-        create: { locationId: khoHN.id, role: LocationRole.MANAGER },
+      role: Role.MANAGER, // Định danh là Quản lý
+      assignedLocations: {
+        create: { locationId: khoHN.id },
       },
     },
   });
@@ -100,9 +99,9 @@ async function main() {
       email: 'kho.hn@example.com',
       password,
       fullName: 'Thủ Kho Hà Nội',
-      systemRole: SystemRole.STAFF,
-      locations: {
-        create: { locationId: khoHN.id, role: LocationRole.WAREHOUSE_STAFF },
+      role: Role.WAREHOUSE_STAFF, // Định danh là Thủ kho
+      assignedLocations: {
+        create: { locationId: khoHN.id },
       },
     },
   });
@@ -116,9 +115,9 @@ async function main() {
       email: 'sales.hn@example.com',
       password,
       fullName: 'Sale Hà Nội',
-      systemRole: SystemRole.STAFF,
-      locations: {
-        create: { locationId: khoHN.id, role: LocationRole.SALESPERSON },
+      role: Role.SALESPERSON,
+      assignedLocations: {
+        create: { locationId: khoHN.id },
       },
     },
   });
@@ -134,9 +133,9 @@ async function main() {
       email: 'manager.hcm@example.com',
       password,
       fullName: 'Trưởng Kho HCM',
-      systemRole: SystemRole.STAFF,
-      locations: {
-        create: { locationId: khoHCM.id, role: LocationRole.MANAGER },
+      role: Role.MANAGER,
+      assignedLocations: {
+        create: { locationId: khoHCM.id },
       },
     },
   });
@@ -150,9 +149,9 @@ async function main() {
       email: 'kho.hcm@example.com',
       password,
       fullName: 'Thủ Kho HCM',
-      systemRole: SystemRole.STAFF,
-      locations: {
-        create: { locationId: khoHCM.id, role: LocationRole.WAREHOUSE_STAFF },
+      role: Role.WAREHOUSE_STAFF,
+      assignedLocations: {
+        create: { locationId: khoHCM.id },
       },
     },
   });

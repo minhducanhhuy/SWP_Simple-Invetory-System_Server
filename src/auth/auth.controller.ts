@@ -11,12 +11,12 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { SystemRolesGuard } from './system-roles.guard';
-import { RequireSystemRole } from './roles.decorator';
-import { SystemRole } from '@prisma/client';
 import { InviteUserDto } from 'src/users/dto/invite-user.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { type Response } from 'express';
+import { RolesGuard } from './roles.guard';
+import { Role } from '@prisma/client';
+import { Roles } from './roles.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -48,6 +48,7 @@ export class AuthController {
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24), // Hết hạn sau 1 ngày
     });
 
+    console.log(loginData.access_token);
     // 3. Trả về thông tin user (nhưng KHÔNG trả access_token trong body nữa)
     return {
       message: 'Đăng nhập thành công',
@@ -63,8 +64,8 @@ export class AuthController {
   }
 
   @Post('invite')
-  @UseGuards(JwtAuthGuard, SystemRolesGuard) // Phải đăng nhập & Có quyền hệ thống
-  @RequireSystemRole(SystemRole.ADMIN, SystemRole.OWNER) // Chỉ Admin/Owner được mời
+  @UseGuards(JwtAuthGuard, RolesGuard) // Phải đăng nhập & Có quyền hệ thống
+  @Roles(Role.ADMIN)
   async invite(@Body() dto: InviteUserDto) {
     return this.authService.inviteUser(dto);
   }
