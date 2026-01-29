@@ -1,4 +1,4 @@
-import { SystemRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import {
   IsEmail,
   IsNotEmpty,
@@ -38,8 +38,9 @@ export class CreateUserDto {
   // 2. Thêm trường systemRole (Optional)
   // Nếu gửi lên thì phải đúng là: "ADMIN", "STAFF" hoặc "OWNER"
   @IsOptional()
-  @IsEnum(SystemRole, {
-    message: 'Role hệ thống không hợp lệ (OWNER, ADMIN, STAFF)',
+  @IsEnum(Role, {
+    message:
+      'Role hệ thống không hợp lệ (OWNER, ADMIN, MANAGER, WAREHOUSE_STAFF, SALESPERSON,STAFF, )',
   })
-  systemRole?: SystemRole;
+  role?: Role;
 }
