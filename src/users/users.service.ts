@@ -10,7 +10,7 @@ export class UsersService {
 
   // 1. Tạo User mới
   async create(createUserDto: CreateUserDto) {
-    // Kiểm tra trùng lặp
+    // 1. Kiểm tra trùng lặp (Logic cũ giữ nguyên)
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -24,18 +24,19 @@ export class UsersService {
       throw new ConflictException('Email hoặc Username đã tồn tại');
     }
 
-    // Hash mật khẩu
+    // 2. Hash password (Logic cũ giữ nguyên)
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    // Lưu vào DB
+    // 3. Lưu vào DB
+    // Lưu ý: role sẽ được lấy từ createUserDto (do Auth service truyền sang)
     const newUser = await this.prisma.user.create({
       data: {
         ...createUserDto,
         password: hashedPassword,
+        isActive: true, // Mặc định active khi tạo xong
       },
     });
 
-    // Loại bỏ password trước khi trả về (bảo mật)
     const { password, ...result } = newUser;
     return result;
   }

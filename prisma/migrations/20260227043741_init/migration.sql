@@ -1,11 +1,11 @@
 -- CreateEnum
-CREATE TYPE "SystemRole" AS ENUM ('OWNER', 'ADMIN', 'STAFF');
+CREATE TYPE "Role" AS ENUM ('OWNER', 'ADMIN_SYSTEM', 'MANAGER', 'WAREHOUSE_STAFF', 'SALESPERSON', 'STAFF');
 
 -- CreateEnum
-CREATE TYPE "LocationRole" AS ENUM ('MANAGER', 'WAREHOUSE_STAFF', 'SALESPERSON', 'STAFF');
+CREATE TYPE "ReasonCode" AS ENUM ('SCRAP', 'INTERNAL_USE', 'GIFT');
 
 -- CreateEnum
-CREATE TYPE "TicketType" AS ENUM ('IMPORT', 'SELL', 'TRANSFER', 'ADJUSTMENT', 'RETURN_TO_SUPP', 'RETURN_FROM_CUST', 'SCRAP');
+CREATE TYPE "TicketType" AS ENUM ('IMPORT', 'SELL', 'TRANSFER', 'ADJUSTMENT', 'RETURN_TO_SUPP', 'RETURN_FROM_CUST');
 
 -- CreateEnum
 CREATE TYPE "TicketStatus" AS ENUM ('DRAFT', 'COMPLETED', 'CANCELLED');
@@ -18,12 +18,24 @@ CREATE TABLE "users" (
     "fullName" TEXT,
     "email" TEXT,
     "phone" TEXT,
-    "systemRole" "SystemRole" NOT NULL DEFAULT 'STAFF',
+    "role" "Role" NOT NULL DEFAULT 'STAFF',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_invitations" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "role" "Role" NOT NULL DEFAULT 'STAFF',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_invitations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -42,7 +54,7 @@ CREATE TABLE "user_locations" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "locationId" TEXT NOT NULL,
-    "role" "LocationRole" NOT NULL DEFAULT 'STAFF',
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "user_locations_pkey" PRIMARY KEY ("id")
 );
@@ -57,33 +69,26 @@ CREATE TABLE "categories" (
 );
 
 -- CreateTable
-CREATE TABLE "attributes" (
+CREATE TABLE "units" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
 
-    CONSTRAINT "attributes_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "attribute_options" (
-    "id" TEXT NOT NULL,
-    "value" TEXT NOT NULL,
-    "numericValue" DOUBLE PRECISION,
-    "displayOrder" INTEGER NOT NULL DEFAULT 0,
-    "metaData" TEXT,
-    "attributeId" TEXT NOT NULL,
-
-    CONSTRAINT "attribute_options_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "units_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "products" (
     "id" TEXT NOT NULL,
+    "sku" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "description" TEXT,
     "imageUrl" TEXT,
+    "description" TEXT,
     "categoryId" TEXT NOT NULL,
-    "supplierId" TEXT,
+    "unitId" TEXT NOT NULL,
+    "costPrice" DECIMAL(15,2) NOT NULL DEFAULT 0,
+    "sellPrice" DECIMAL(15,2) NOT NULL DEFAULT 0,
+    "minStockLevel" INTEGER NOT NULL DEFAULT 10,
+    "maxStockLevel" INTEGER,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -92,33 +97,10 @@ CREATE TABLE "products" (
 );
 
 -- CreateTable
-CREATE TABLE "product_variants" (
-    "id" TEXT NOT NULL,
-    "sku" TEXT NOT NULL,
-    "name" TEXT,
-    "productId" TEXT NOT NULL,
-    "costPrice" DECIMAL(15,2) NOT NULL DEFAULT 0,
-    "sellPrice" DECIMAL(15,2) NOT NULL DEFAULT 0,
-    "minStockLevel" INTEGER NOT NULL DEFAULT 10,
-    "maxStockLevel" INTEGER,
-
-    CONSTRAINT "product_variants_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "variant_options" (
-    "id" TEXT NOT NULL,
-    "variantId" TEXT NOT NULL,
-    "attributeOptionId" TEXT NOT NULL,
-
-    CONSTRAINT "variant_options_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "inventory_items" (
     "id" TEXT NOT NULL,
     "locationId" TEXT NOT NULL,
-    "productVariantId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -150,15 +132,6 @@ CREATE TABLE "customers" (
 );
 
 -- CreateTable
-CREATE TABLE "reasons" (
-    "id" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
-    "type" "TicketType" NOT NULL,
-
-    CONSTRAINT "reasons_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "stock_tickets" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -166,15 +139,12 @@ CREATE TABLE "stock_tickets" (
     "status" "TicketStatus" NOT NULL DEFAULT 'COMPLETED',
     "note" TEXT,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reason" "ReasonCode",
     "creatorId" TEXT NOT NULL,
     "supplierId" TEXT,
     "customerId" TEXT,
-    "reasonId" TEXT,
     "sourceLocationId" TEXT,
     "destLocationId" TEXT,
-    "totalAmount" DECIMAL(15,2) NOT NULL DEFAULT 0,
-    "paidAmount" DECIMAL(15,2) NOT NULL DEFAULT 0,
-    "paymentStatus" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -185,8 +155,9 @@ CREATE TABLE "stock_tickets" (
 CREATE TABLE "stock_transactions" (
     "id" TEXT NOT NULL,
     "ticketId" TEXT NOT NULL,
-    "productVariantId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
+    "originalCost" DECIMAL(15,2) NOT NULL DEFAULT 0,
     "price" DECIMAL(15,2) NOT NULL,
 
     CONSTRAINT "stock_transactions_pkey" PRIMARY KEY ("id")
@@ -212,22 +183,25 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "user_invitations_email_key" ON "user_invitations"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_invitations_token_key" ON "user_invitations"("token");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "locations_code_key" ON "locations"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_locations_userId_locationId_key" ON "user_locations"("userId", "locationId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "attributes_name_key" ON "attributes"("name");
+CREATE UNIQUE INDEX "units_name_key" ON "units"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "product_variants_sku_key" ON "product_variants"("sku");
+CREATE UNIQUE INDEX "products_sku_key" ON "products"("sku");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "variant_options_variantId_attributeOptionId_key" ON "variant_options"("variantId", "attributeOptionId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventory_items_locationId_productVariantId_key" ON "inventory_items"("locationId", "productVariantId");
+CREATE UNIQUE INDEX "inventory_items_locationId_productId_key" ON "inventory_items"("locationId", "productId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "suppliers_code_key" ON "suppliers"("code");
@@ -237,9 +211,6 @@ CREATE UNIQUE INDEX "customers_code_key" ON "customers"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "customers_phone_key" ON "customers"("phone");
-
--- CreateIndex
-CREATE UNIQUE INDEX "reasons_content_key" ON "reasons"("content");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stock_tickets_code_key" ON "stock_tickets"("code");
@@ -254,28 +225,16 @@ ALTER TABLE "user_locations" ADD CONSTRAINT "user_locations_userId_fkey" FOREIGN
 ALTER TABLE "user_locations" ADD CONSTRAINT "user_locations_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "attribute_options" ADD CONSTRAINT "attribute_options_attributeId_fkey" FOREIGN KEY ("attributeId") REFERENCES "attributes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "products" ADD CONSTRAINT "products_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "suppliers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "product_variants" ADD CONSTRAINT "product_variants_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "variant_options" ADD CONSTRAINT "variant_options_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "product_variants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "variant_options" ADD CONSTRAINT "variant_options_attributeOptionId_fkey" FOREIGN KEY ("attributeOptionId") REFERENCES "attribute_options"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "products" ADD CONSTRAINT "products_unitId_fkey" FOREIGN KEY ("unitId") REFERENCES "units"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "inventory_items" ADD CONSTRAINT "inventory_items_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inventory_items" ADD CONSTRAINT "inventory_items_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "product_variants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inventory_items" ADD CONSTRAINT "inventory_items_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -287,9 +246,6 @@ ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_supplierId_fkey" FOREI
 ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_reasonId_fkey" FOREIGN KEY ("reasonId") REFERENCES "reasons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_sourceLocationId_fkey" FOREIGN KEY ("sourceLocationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -299,7 +255,7 @@ ALTER TABLE "stock_tickets" ADD CONSTRAINT "stock_tickets_destLocationId_fkey" F
 ALTER TABLE "stock_transactions" ADD CONSTRAINT "stock_transactions_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "stock_tickets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock_transactions" ADD CONSTRAINT "stock_transactions_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "product_variants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "stock_transactions" ADD CONSTRAINT "stock_transactions_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "supplier_payments" ADD CONSTRAINT "supplier_payments_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "suppliers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

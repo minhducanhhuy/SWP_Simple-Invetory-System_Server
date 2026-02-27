@@ -9,13 +9,13 @@ import {
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 // Import Enum từ Prisma Client (QUAN TRỌNG)
-import { SystemRole } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { InviteUserDto } from 'src/users/dto/invite-user.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { randomBytes } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +23,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private usersService: UsersService,
   ) {}
 
   async validateUser(username: string, pass: string): Promise<any> {
@@ -38,7 +39,7 @@ export class AuthService {
   // 1. ADMIN GỌI HÀM NÀY
   // --- 1. ADMIN GỌI HÀM NÀY ĐỂ MỜI ---
   async inviteUser(dto: InviteUserDto) {
-    const { email, systemRole } = dto;
+    const { email, role } = dto;
 
     // Check xem email đã có account chưa
     const existingUser = await this.prisma.user.findFirst({ where: { email } });
@@ -71,13 +72,13 @@ export class AuthService {
       data: {
         email,
         token,
-        systemRole: systemRole || 'STAFF', // Mặc định là STAFF nếu không chọn
+        role: role || 'STAFF', // Mặc định là STAFF nếu không chọn
         expiresAt,
       },
     });
 
     // Gửi mail
-    await this.mailService.sendInvitation(email, token, systemRole || 'STAFF');
+    await this.mailService.sendInvitation(email, token, role || 'STAFF');
 
     return { message: 'Đã gửi lời mời thành công!' };
   }
@@ -86,47 +87,39 @@ export class AuthService {
   async acceptInvite(dto: AcceptInviteDto) {
     const { token, username, password, fullName, phone } = dto;
 
-    // Tìm thông tin lời mời dựa trên token
+    // 1. Validate Token (Logic nghiệp vụ của Auth - Giữ nguyên)
     const invitation = await this.prisma.userInvitation.findUnique({
       where: { token },
     });
 
-    // Validate token
     if (!invitation) {
       throw new NotFoundException('Lời mời không tồn tại hoặc đường dẫn sai.');
     }
 
     if (new Date() > invitation.expiresAt) {
-      await this.prisma.userInvitation.delete({ where: { token } }); // Xóa rác
+      await this.prisma.userInvitation.delete({ where: { token } });
       throw new BadRequestException(
         'Lời mời đã hết hạn. Vui lòng liên hệ Admin để nhận lại.',
       );
     }
 
-    // Check username xem có bị trùng với ai không
-    const usernameExist = await this.prisma.user.findUnique({
-      where: { username },
-    });
-    if (usernameExist) {
-      throw new ConflictException('Username này đã có người sử dụng.');
-    }
-
-    // Tạo user thật sự
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await this.prisma.user.create({
-      data: {
+    // 2. CHUYỂN GIAO TRÁCH NHIỆM TẠO USER CHO USERS SERVICE
+    // Auth Service chỉ có nhiệm vụ tổng hợp dữ liệu chuẩn xác
+    try {
+      await this.usersService.create({
         username,
-        password: hashedPassword,
-        email: invitation.email, // Lấy email từ lời mời (đảm bảo chính chủ)
+        password, // UsersService sẽ tự hash
         fullName,
         phone,
-        systemRole: invitation.systemRole, // Role đã được admin set từ trước
-        isActive: true,
-      },
-    });
+        email: invitation.email, // Quan trọng: Lấy email gốc từ lời mời để bảo mật
+        role: invitation.role, // Quan trọng: Lấy role gốc từ lời mời
+      });
+    } catch (error) {
+      // Handle lỗi từ UsersService ném ra (ví dụ trùng username)
+      throw error;
+    }
 
-    // Xóa lời mời sau khi hoàn tất
+    // 3. Dọn dẹp (Logic của Auth - Giữ nguyên)
     await this.prisma.userInvitation.delete({ where: { token } });
 
     return {
@@ -138,7 +131,7 @@ export class AuthService {
     const payload = {
       username: user.username,
       sub: user.id,
-      role: user.systemRole,
+      role: user.role,
     };
 
     return {
@@ -147,7 +140,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         fullName: user.fullName,
-        systemRole: user.systemRole, // Trả về role cho FE
+        role: user.role, // Trả về role cho FE
       },
     };
   }
@@ -168,11 +161,6 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Logic: Nếu là user đầu tiên thì set là OWNER, còn lại là STAFF
-    const usersCount = await this.prisma.user.count();
-    const assignedRole: SystemRole =
-      usersCount === 0 ? SystemRole.OWNER : SystemRole.STAFF;
-
     try {
       const user = await this.prisma.user.create({
         data: {
@@ -181,8 +169,6 @@ export class AuthService {
           email,
           fullName,
           phone,
-          // SỬA LỖI Ở ĐÂY: Dùng 'systemRole' thay vì 'role'
-          systemRole: assignedRole,
         },
       });
 

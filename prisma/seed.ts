@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Bắt đầu khởi tạo dữ liệu mẫu (Seeding)...');
 
-  // 1. Tạo Mật khẩu hash chung (123456)
+  // 1. Tạo Mật khẩu hash chung (123456aA@)
   const password = await bcrypt.hash('123456aA@', 10);
 
   // 2. Tạo 2 Kho (Locations)
@@ -63,7 +63,7 @@ async function main() {
       email: 'admin@example.com',
       password,
       fullName: 'Admin Hệ Thống',
-      role: Role.ADMIN,
+      role: Role.ADMIN_SYSTEM,
       assignedLocations: {
         create: [{ locationId: khoHN.id }],
       },
@@ -156,10 +156,215 @@ async function main() {
     },
   });
 
-  console.log('✅ Đã tạo nhân viên chi tiết cho từng kho');
-  console.log('🚀 Seeding hoàn tất! Mật khẩu chung là: 123456');
-}
+  // =========================================================
+  // 7. TẠO DANH MỤC & ĐƠN VỊ TÍNH (Category & Unit)
+  // =========================================================
+  console.log('🔄 Đang tạo Danh mục & Đơn vị tính...');
 
+  const catDoUong = await prisma.category.create({
+    data: { name: 'Đồ uống', description: 'Nước ngọt, bia, nước suối' },
+  });
+
+  const catDoAn = await prisma.category.create({
+    data: { name: 'Đồ ăn nhanh', description: 'Mì gói, snack, bánh kẹo' },
+  });
+
+  const unitLon = await prisma.unit.create({
+    data: { name: 'Lon' },
+  });
+
+  const unitGoi = await prisma.unit.create({
+    data: { name: 'Gói' },
+  });
+
+  // =========================================================
+  // 8. TẠO ĐỐI TÁC (Supplier & Customer)
+  // =========================================================
+  console.log('🔄 Đang tạo Nhà cung cấp & Khách hàng...');
+
+  // Nhà cung cấp
+  const supCoca = await prisma.supplier.create({
+    data: {
+      code: 'NCC-COCA',
+      name: 'Coca Cola Việt Nam',
+      email: 'contact@coca.vn',
+      phone: '0909111222',
+      address: 'Thủ Đức, HCM',
+    },
+  });
+
+  const supAcecook = await prisma.supplier.create({
+    data: {
+      code: 'NCC-ACECOOK',
+      name: 'Acecook Việt Nam',
+      email: 'sales@acecook.vn',
+      phone: '0909333444',
+      address: 'Tân Bình, HCM',
+    },
+  });
+
+  // Khách hàng
+  const custLe = await prisma.customer.create({
+    data: {
+      code: 'KH-VANG-LAI',
+      name: 'Khách Vãng Lai',
+      phone: '0000000000',
+      address: 'N/A',
+    },
+  });
+
+  const custVip = await prisma.customer.create({
+    data: {
+      code: 'KH-001',
+      name: 'Nguyễn Văn A (VIP)',
+      phone: '0912345678',
+      address: 'Hoàn Kiếm, Hà Nội',
+    },
+  });
+
+  // =========================================================
+  // 9. TẠO SẢN PHẨM (Product)
+  // =========================================================
+  console.log('🔄 Đang tạo Sản phẩm...');
+
+  const prodCoke = await prisma.product.create({
+    data: {
+      sku: '893000123456',
+      name: 'Coca Cola 330ml',
+      categoryId: catDoUong.id,
+      unitId: unitLon.id,
+      costPrice: 8000, // Nhập 8k
+      sellPrice: 10000, // Bán 10k
+      minStockLevel: 20,
+    },
+  });
+
+  const prodHaoHao = await prisma.product.create({
+    data: {
+      sku: '893000789012',
+      name: 'Mì Hảo Hảo Tôm Chua Cay',
+      categoryId: catDoAn.id,
+      unitId: unitGoi.id,
+      costPrice: 3500,
+      sellPrice: 4500,
+      minStockLevel: 50,
+    },
+  });
+
+  //   // =========================================================
+  //   // 10. TẠO TỒN KHO (InventoryItem)
+  //   // =========================================================
+  //   console.log('🔄 Đang set tồn kho ban đầu...');
+
+  //   // Set tồn kho tại Kho HN
+  //   await prisma.inventoryItem.createMany({
+  //     data: [
+  //       { locationId: khoHN.id, productId: prodCoke.id, quantity: 100 },
+  //       { locationId: khoHN.id, productId: prodHaoHao.id, quantity: 200 },
+  //     ],
+  //   });
+
+  //   // Set tồn kho tại Kho HCM
+  //   await prisma.inventoryItem.createMany({
+  //     data: [
+  //       { locationId: khoHCM.id, productId: prodCoke.id, quantity: 50 }, // HCM ít hàng hơn
+  //       { locationId: khoHCM.id, productId: prodHaoHao.id, quantity: 0 }, // Hết mì
+  //     ],
+  //   });
+
+  //   // =========================================================
+  //   // 11. TẠO GIAO DỊCH KHO (StockTicket & StockTransaction)
+  //   // =========================================================
+  //   console.log('🔄 Đang tạo Vé nhập/xuất kho...');
+
+  //   // Lấy user Owner hoặc Admin để làm người tạo phiếu
+  //   const adminUser = await prisma.user.findUnique({
+  //     where: { username: 'admin' },
+  //   });
+
+  //   if (adminUser) {
+  //     // 11.1 Tạo phiếu NHẬP HÀNG (IMPORT)
+  //     await prisma.stockTicket.create({
+  //       data: {
+  //         code: 'PN-001',
+  //         type: 'IMPORT',
+  //         status: 'COMPLETED',
+  //         note: 'Nhập hàng đầu tháng',
+  //         creatorId: adminUser.id,
+  //         destLocationId: khoHN.id, // Nhập vào kho HN
+  //         details: {
+  //           create: [
+  //             {
+  //               productId: prodCoke.id,
+  //               quantity: 100,
+  //               price: 8000, // Giá nhập khớp với product
+  //             },
+  //           ],
+  //         },
+  //       },
+  //     });
+
+  //     // 11.2 Tạo phiếu BÁN HÀNG (SELL)
+  //     await prisma.stockTicket.create({
+  //       data: {
+  //         code: 'PX-001',
+  //         type: 'SELL',
+  //         status: 'COMPLETED',
+  //         note: 'Bán cho khách VIP',
+  //         creatorId: adminUser.id,
+  //         sourceLocationId: khoHN.id, // Xuất từ kho HN
+  //         customerId: custVip.id,
+  //         details: {
+  //           create: [
+  //             {
+  //               productId: prodCoke.id,
+  //               quantity: 24, // 1 thùng
+  //               price: 10000, // Giá bán
+  //             },
+  //             {
+  //               productId: prodHaoHao.id,
+  //               quantity: 10,
+  //               price: 4500,
+  //             },
+  //           ],
+  //         },
+  //       },
+  //     });
+  //   }
+
+  // =========================================================
+  // 12. TẠO THANH TOÁN (SupplierPayment)
+  // =========================================================
+  //   console.log('🔄 Đang tạo phiếu chi tiền nhà cung cấp...');
+
+  //   if (adminUser) {
+  //      await prisma.supplierPayment.create({
+  //        data: {
+  //          code: 'PC-001',
+  //          amount: 500000, // Trả trước 500k
+  //          creatorId: adminUser.id,
+  //          note: 'Thanh toán đợt 1 tiền nhập Coca',
+  //        },
+  //      });
+  //   }
+
+  // =========================================================
+  // 13. TẠO USER INVITATION (Lời mời tham gia)
+  // =========================================================
+  console.log('🔄 Đang tạo lời mời nhân viên...');
+
+  await prisma.userInvitation.create({
+    data: {
+      email: 'new.staff@example.com',
+      token: 'invite-token-123456', // Giả lập token
+      role: Role.STAFF,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Hết hạn sau 7 ngày
+    },
+  });
+
+  console.log('✅ Đã tạo nhân viên chi tiết cho từng kho');
+  console.log('🚀 Seeding hoàn tất! Mật khẩu chung là: 123456aA@');
+}
 main()
   .catch((e) => {
     console.error(e);
