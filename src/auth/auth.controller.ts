@@ -11,12 +11,13 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { InviteUserDto } from 'src/users/dto/invite-user.dto';
+
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { type Response } from 'express';
 import { RolesGuard } from './roles.guard';
 import { Role } from '@prisma/client';
 import { Roles } from './roles.decorator';
+import { InviteUserDto } from './dto/invite-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -45,10 +46,10 @@ export class AuthController {
       httpOnly: true, // Javascript client không đọc được (Chống XSS)
       secure: false, // Đặt là true nếu chạy https (Production)
       sameSite: 'lax', // Hoặc 'none' nếu frontend/backend khác domain
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24), // Hết hạn sau 1 ngày
+      path: '/',
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // Hết hạn sau 1 ngày
     });
 
-    console.log(loginData.access_token);
     // 3. Trả về thông tin user (nhưng KHÔNG trả access_token trong body nữa)
     return {
       message: 'Đăng nhập thành công',
@@ -65,7 +66,7 @@ export class AuthController {
 
   @Post('invite')
   @UseGuards(JwtAuthGuard, RolesGuard) // Phải đăng nhập & Có quyền hệ thống
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN_SYSTEM)
   async invite(@Body() dto: InviteUserDto) {
     return this.authService.inviteUser(dto);
   }
@@ -73,6 +74,7 @@ export class AuthController {
   // API 2: Public API (Không cần đăng nhập) để User tạo acc từ link
   @Post('accept-invite')
   async acceptInvite(@Body() dto: AcceptInviteDto) {
+    console.log('đã nhận được request');
     return this.authService.acceptInvite(dto);
   }
 }
