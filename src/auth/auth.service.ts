@@ -11,11 +11,11 @@ import { JwtService } from '@nestjs/jwt';
 // Import Enum từ Prisma Client (QUAN TRỌNG)
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
-import { InviteUserDto } from 'src/users/dto/invite-user.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { randomBytes } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { UsersService } from 'src/users/users.service';
+import { InviteUserDto } from './dto/invite-user.dto';
 
 @Injectable()
 export class AuthService {
