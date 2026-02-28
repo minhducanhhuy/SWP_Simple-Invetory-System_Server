@@ -10,6 +10,10 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async getMyInfo(user: any) {
+    if (!user?.id) {
+      throw new Error('User id is missing from request');
+    }
+
     const foundUser = await this.prisma.user.findUnique({
       where: {
         id: user.id,

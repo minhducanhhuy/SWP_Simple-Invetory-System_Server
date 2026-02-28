@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
+
 // Import Enum từ Prisma Client (QUAN TRỌNG)
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -16,6 +16,7 @@ import { randomBytes } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { UsersService } from 'src/users/users.service';
 import { InviteUserDto } from './dto/invite-user.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
