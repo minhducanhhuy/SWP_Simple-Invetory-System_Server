@@ -11,6 +11,7 @@ import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
 import { LocationsModule } from './locations/locations.module';
+import { CustomersModule } from './customers/customers.module';
 
 @Global()
 @Module({
@@ -43,6 +44,7 @@ import { LocationsModule } from './locations/locations.module';
     }),
     StockTicketsModule,
     LocationsModule,
+    CustomersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
