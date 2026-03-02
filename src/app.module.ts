@@ -10,6 +10,7 @@ import { MailModule } from './mail/mail.module';
 // 1. IMPORT THƯ VIỆN MAILER
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Global()
 @Module({
@@ -41,6 +42,7 @@ import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
       // hoặc giữ nguyên cũng không sao (miễn là đừng gọi template khi chưa setup folder)
     }),
     StockTicketsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
