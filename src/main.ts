@@ -17,6 +17,6 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Accept, Authorization, X-CSRF-TOKEN',
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3035);
 }
 bootstrap();

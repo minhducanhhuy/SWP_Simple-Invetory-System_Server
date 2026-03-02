@@ -14,7 +14,7 @@ import { MailModule } from 'src/mail/mail.module';
     PassportModule,
     MailModule,
     JwtModule.register({
-      secret: 'SECRET_KEY_CUA_BAN', // Nhớ đưa vào .env
+      secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: {
         expiresIn: (process.env.JWT_EXPIRATION_TIME || '1d') as ms.StringValue,
       }, // Token hết hạn sau 1 ngày

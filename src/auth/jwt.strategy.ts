@@ -43,7 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // Trả về object user mới nhất từ DB.
     // NestJS sẽ gắn object này vào `req.user`
     return {
-      userId: user.id,
+      id: user.id,
       username: user.username,
       role: user.role, // <--- ĐÂY LÀ ROLE TƯƠI MỚI NHẤT TỪ DB
       // Các trường khác nếu cần

@@ -5,7 +5,7 @@ export class LoginDto {
   @MinLength(5, { message: 'Tên đăng nhập phải có ít nhất 5 ký tự' })
   @MaxLength(30, { message: 'Tên đăng nhập không quá 30 ký tự' })
   // Regex: Cho phép chữ cái và số, không ký tự đặc biệt (tùy logic dự án)
-  @Matches(/^[a-zA-Z0-9]+$/, {
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
     message: 'Tên đăng nhập chỉ chứa chữ cái và số',
   })
   username: string;

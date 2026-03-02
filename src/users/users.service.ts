@@ -3,10 +3,25 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
+
+  async getMyInfo(user: any) {
+    if (!user?.id) {
+      throw new Error('User id is missing from request');
+    }
+
+    const foundUser = await this.prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+    });
+
+    return foundUser;
+  }
 
   // 1. Tạo User mới
   async create(createUserDto: CreateUserDto) {
@@ -21,7 +36,7 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Email hoặc Username đã tồn tại');
+      throw new ConflictException('Username đã tồn tại');
     }
 
     // 2. Hash password (Logic cũ giữ nguyên)
@@ -46,6 +61,37 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { username } });
   }
 
+  // [MỚI] Lấy danh sách tất cả user (trừ password)
+  async findAll() {
+    const users = await this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        assignedLocations: {
+          include: {
+            location: true, // Lấy chi tiết tên kho
+          },
+        },
+      },
+    });
+
+    return users.map((user) => {
+      const { password, ...result } = user;
+      // Flat lại cấu trúc để FE dễ dùng: assignedLocations: [{id, name}, ...]
+      const locations = user.assignedLocations.map((ul) => ({
+        id: ul.location.id,
+        name: ul.location.name,
+      }));
+      return { ...result, assignedLocations: locations };
+    });
+  }
+
+  // [MỚI] Xóa user
+  async remove(id: string) {
+    return this.prisma.user.delete({
+      where: { id },
+    });
+  }
+
   // 3. Tìm user theo ID
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
@@ -56,19 +102,64 @@ export class UsersService {
     return null;
   }
 
-  // 4. Cập nhật thông tin
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    // Nếu có đổi mật khẩu thì phải hash lại
-    if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+  // [MỚI] Hàm cho User tự sửa (Chỉ cho sửa Tên, SĐT, Pass)
+  async updateProfile(id: string, dto: UpdateUserDto) {
+    const dataToUpdate: any = {};
+
+    // Chỉ lấy các trường cho phép
+    if (dto.fullName) dataToUpdate.fullName = dto.fullName;
+    if (dto.phone) dataToUpdate.phone = dto.phone;
+
+    // Nếu có đổi pass thì hash
+    if (dto.password) {
+      dataToUpdate.password = await bcrypt.hash(dto.password, 10);
     }
 
-    const updatedUser = await this.prisma.user.update({
+    // Tuyệt đối KHÔNG update role, email, username ở đây
+    const user = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: dataToUpdate,
     });
 
-    const { password, ...result } = updatedUser;
+    const { password, ...result } = user;
     return result;
+  }
+
+  // [MỚI] Hàm cho Admin sửa Role
+  async updateRole(id: string, role: Role) {
+    // role kiểu Role enum
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { role }, // Chỉ update role
+    });
+    const { password, ...result } = user;
+    return result;
+  }
+
+  // [MỚI] Hàm gán kho cho nhân viên
+  async assignLocations(userId: string, locationIds: string[]) {
+    // Dùng transaction để đảm bảo dữ liệu nhất quán
+    return await this.prisma.$transaction(async (tx) => {
+      // B1: Xóa tất cả quyền kho cũ của user này
+      await tx.userLocation.deleteMany({
+        where: { userId },
+      });
+
+      // B2: Tạo quyền kho mới (nếu có chọn)
+      if (locationIds.length > 0) {
+        await tx.userLocation.createMany({
+          data: locationIds.map((locId) => ({
+            userId,
+            locationId: locId,
+          })),
+        });
+      }
+
+      // Trả về user mới nhất
+      return tx.user.findUnique({
+        where: { id: userId },
+        include: { assignedLocations: { include: { location: true } } },
+      });
+    });
   }
 }
