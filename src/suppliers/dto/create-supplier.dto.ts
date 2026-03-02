@@ -1,4 +1,3 @@
-export class CreateSupplierDto {}
 import {
   IsNotEmpty,
   IsOptional,
