@@ -9,6 +9,7 @@ import { MailModule } from './mail/mail.module';
 
 // 1. IMPORT THƯ VIỆN MAILER
 import { MailerModule } from '@nestjs-modules/mailer';
+import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
 import { LocationsModule } from './locations/locations.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 
@@ -41,6 +42,7 @@ import { SuppliersModule } from './suppliers/suppliers.module';
       // Nếu bạn chưa dùng template .hbs thì có thể bỏ qua phần template này
       // hoặc giữ nguyên cũng không sao (miễn là đừng gọi template khi chưa setup folder)
     }),
+    StockTicketsModule,
     LocationsModule,
     SuppliersModule,
   ],
