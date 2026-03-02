@@ -3,8 +3,7 @@ import {
   IsOptional,
   IsString,
   IsEmail,
-  IsNumber,
-  Min,
+  IsPhoneNumber,
 } from 'class-validator';
 
 export class CreateSupplierDto {
@@ -18,6 +17,7 @@ export class CreateSupplierDto {
 
   @IsOptional()
   @IsString()
+  @IsPhoneNumber('VN', { message: 'Số điện thoại không đúng định dạng' })
   phone?: string;
 
   @IsOptional()
@@ -29,7 +29,6 @@ export class CreateSupplierDto {
   address?: string;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  // bỏ qua trường hợp người dùng không nhập gì hoặc nhập chuỗi rỗng, mặc định là 0
   initialDebt?: number; // Nợ đầu kỳ (nếu có)
 }
