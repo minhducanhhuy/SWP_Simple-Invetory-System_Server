@@ -29,7 +29,7 @@ export class ProductsController {
   // --- TẠO SẢN PHẨM ---
   // Yêu cầu: Phải là ADMIN hoặc MANAGER
   @Post()
-  @Roles(Role.OWNER, Role.MANAGER) // Cho phép cả nhân viên kho tạo
+  @Roles(Role.OWNER, Role.MANAGER, Role.WAREHOUSE_STAFF) //Cho phép cả nhân viên tạo
   create(@Body() createProductDto: CreateProductDto) {
     // Truyền userId vào service để ghi log người tạo
     return this.productsService.create(createProductDto);
