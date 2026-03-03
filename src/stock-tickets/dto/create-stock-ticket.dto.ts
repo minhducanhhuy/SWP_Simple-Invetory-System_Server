@@ -30,14 +30,13 @@ class TicketDetailDto {
 }
 
 export class CreateStockTicketDto {
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Loại phiếu (Nhập/Xuất) không được để trống' })
   @IsEnum(TicketType)
-  type: TicketType; // IMPORT, SELL, TRANSFER...
+  type: TicketType;
 
-  @ValidateIf((o) => o.type === TicketType.ADJUSTMENT)
-  @IsNotEmpty({ message: 'Phải chọn lý do điều chỉnh (Xuất hủy/Nội bộ...)' })
+  @IsNotEmpty({ message: 'Bắt buộc phải chọn lý do cụ thể (Reason Code)' })
   @IsEnum(ReasonCode, { message: 'Mã lý do không hợp lệ' })
-  reason?: ReasonCode;
+  reason: ReasonCode; // SCRAP, GIFT, TRANSFER, RETURN...
 
   @IsOptional()
   @IsEnum(TicketStatus)
@@ -64,6 +63,7 @@ export class CreateStockTicketDto {
   destLocationId?: string; // Kho nhập (Dùng cho IMPORT, TRANSFER)
 
   @IsArray()
+  @IsNotEmpty({ message: 'Danh sách sản phẩm không được để trống' })
   @ValidateNested({ each: true })
   @Type(() => TicketDetailDto)
   details: TicketDetailDto[];
