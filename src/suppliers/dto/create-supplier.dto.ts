@@ -4,6 +4,8 @@ import {
   IsString,
   IsEmail,
   IsPhoneNumber,
+  IsNumber,
+  Min,
 } from 'class-validator';
 
 export class CreateSupplierDto {
@@ -29,6 +31,8 @@ export class CreateSupplierDto {
   address?: string;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
   // bỏ qua trường hợp người dùng không nhập gì hoặc nhập chuỗi rỗng, mặc định là 0
   initialDebt?: number; // Nợ đầu kỳ (nếu có)
 }
