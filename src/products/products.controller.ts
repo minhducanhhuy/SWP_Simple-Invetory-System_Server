@@ -29,7 +29,7 @@ export class ProductsController {
   // --- TẠO SẢN PHẨM ---
   // Yêu cầu: Phải là ADMIN hoặc MANAGER
   @Post()
-  @Roles(Role.WAREHOUSE_STAFF, Role.ADMIN_SYSTEM, Role.MANAGER) // Cho phép cả nhân viên kho tạo
+  @Roles(Role.OWNER, Role.MANAGER) // Cho phép cả nhân viên kho tạo
   create(@Body() createProductDto: CreateProductDto) {
     // Truyền userId vào service để ghi log người tạo
     return this.productsService.create(createProductDto);
@@ -59,7 +59,7 @@ export class ProductsController {
   // --- CẬP NHẬT SẢN PHẨM ---
   // Yêu cầu: ADMIN hoặc MANAGER
   @Patch(':id')
-  @Roles(Role.ADMIN_SYSTEM, Role.OWNER, Role.WAREHOUSE_STAFF)
+  @Roles(Role.OWNER, Role.WAREHOUSE_STAFF)
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     return this.productsService.update(id, updateProductDto);
   }
@@ -67,7 +67,7 @@ export class ProductsController {
   // --- XÓA SẢN PHẨM (Soft Delete) ---
   // Yêu cầu: Chỉ ADMIN mới được xóa để đảm bảo an toàn dữ liệu
   @Delete(':id')
-  @Roles(Role.ADMIN_SYSTEM)
+  @Roles(Role.OWNER, Role.MANAGER)
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }
