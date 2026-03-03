@@ -7,7 +7,7 @@ import {
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { PrismaService } from 'prisma/prisma.service';
-import { TicketType } from '@prisma/client';
+import { ReasonCode, TicketType } from '@prisma/client';
 
 @Injectable()
 export class SuppliersService {
@@ -28,9 +28,9 @@ export class SuppliersService {
           0,
         );
 
-        if (ticket.type === TicketType.IMPORT) {
+        if (ticket.reason === ReasonCode.BUY) {
           currentDebt += ticketTotal; // Tăng nợ
-        } else if (ticket.type === TicketType.RETURN_TO_SUPP) {
+        } else if (ticket.reason === ReasonCode.RETURN_TO_SUPP) {
           currentDebt -= ticketTotal; // Giảm nợ
         }
       });
@@ -92,10 +92,7 @@ export class SuppliersService {
       include: {
         tickets: {
           where: {
-            OR: [
-              { type: TicketType.IMPORT },
-              { type: TicketType.RETURN_TO_SUPP },
-            ],
+            reason: ReasonCode.BUY,
           },
           include: { details: true, creator: { select: { fullName: true } } },
           orderBy: { createdAt: 'desc' },
