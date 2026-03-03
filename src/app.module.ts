@@ -11,6 +11,7 @@ import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
 import { LocationsModule } from './locations/locations.module';
+import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { ProductsModule } from './products/products.module';
@@ -47,6 +48,7 @@ import { ProductsModule } from './products/products.module';
     }),
     StockTicketsModule,
     LocationsModule,
+    CustomersModule,
     SuppliersModule,
     MasterDataModule,
     ProductsModule,
