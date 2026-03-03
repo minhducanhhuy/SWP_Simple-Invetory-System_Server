@@ -12,6 +12,9 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { StockTicketsModule } from './stock-tickets/stock-tickets.module';
 import { LocationsModule } from './locations/locations.module';
 import { CustomersModule } from './customers/customers.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
+import { MasterDataModule } from './master-data/master-data.module';
+import { ProductsModule } from './products/products.module';
 
 @Global()
 @Module({
@@ -25,6 +28,7 @@ import { CustomersModule } from './customers/customers.module';
     AuthModule,
     UsersModule,
     MailModule,
+    ProductsModule,
     // 2. CẤU HÌNH MAILER MODULE (Global)
     MailerModule.forRoot({
       transport: {
@@ -45,6 +49,9 @@ import { CustomersModule } from './customers/customers.module';
     StockTicketsModule,
     LocationsModule,
     CustomersModule,
+    SuppliersModule,
+    MasterDataModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
