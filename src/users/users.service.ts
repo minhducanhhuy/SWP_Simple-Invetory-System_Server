@@ -1,4 +1,9 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,17 +15,27 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async getMyInfo(user: any) {
-    if (!user?.id) {
-      throw new Error('User id is missing from request');
-    }
-
     const foundUser = await this.prisma.user.findUnique({
       where: {
         id: user.id,
       },
     });
 
-    return foundUser;
+    // 1. Kiểm tra nếu không tìm thấy user
+    if (!foundUser) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    // 2. Kiểm tra trạng thái hoạt động
+    if (!foundUser.isActive) {
+      // Quăng lỗi Forbidden với thông báo tiếng Việt
+      throw new ForbiddenException(
+        'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+      );
+    }
+
+    const { password, ...result } = foundUser;
+    return result;
   }
 
   // 1. Tạo User mới
@@ -161,5 +176,15 @@ export class UsersService {
         include: { assignedLocations: { include: { location: true } } },
       });
     });
+  }
+
+  // [MỚI] Hàm cập nhật trạng thái hoạt động
+  async updateStatus(id: string, isActive: boolean) {
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { isActive }, // Cập nhật trạng thái true/false
+    });
+    const { password, ...result } = user;
+    return result;
   }
 }
