@@ -41,9 +41,9 @@ export class LocationsController {
     return this.locationsService.findOne(id);
   }
 
-  // Chỉ OWNER hoặc ADMIN mới được sửa thông tin kho
+  // Cả OWNER và ADMIN_SYSTEM đều được sửa thông tin và trạng thái kho
   @Patch(':id')
-  @Roles(Role.OWNER)
+  @Roles(Role.OWNER, Role.ADMIN_SYSTEM)
   update(
     @Param('id') id: string,
     @Body() updateLocationDto: UpdateLocationDto,
