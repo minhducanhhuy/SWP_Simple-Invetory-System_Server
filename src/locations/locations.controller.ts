@@ -24,7 +24,7 @@ export class LocationsController {
 
   // Chỉ OWNER hoặc ADMIN mới được tạo kho
   @Post()
-  @Roles(Role.OWNER, Role.ADMIN_SYSTEM)
+  @Roles(Role.OWNER)
   create(@Body() createLocationDto: CreateLocationDto) {
     return this.locationsService.create(createLocationDto);
   }
@@ -43,7 +43,7 @@ export class LocationsController {
 
   // Chỉ OWNER hoặc ADMIN mới được sửa thông tin kho
   @Patch(':id')
-  @Roles(Role.OWNER, Role.ADMIN_SYSTEM)
+  @Roles(Role.OWNER)
   update(
     @Param('id') id: string,
     @Body() updateLocationDto: UpdateLocationDto,
@@ -53,7 +53,7 @@ export class LocationsController {
 
   // Chỉ OWNER hoặc ADMIN mới được xóa kho
   @Delete(':id')
-  @Roles(Role.OWNER, Role.ADMIN_SYSTEM) // Chỉ chủ hoặc admin mới được xóa
+  @Roles(Role.OWNER) // Chỉ chủ hoặc admin mới được xóa
   remove(@Param('id') id: string) {
     return this.locationsService.remove(id);
   }
