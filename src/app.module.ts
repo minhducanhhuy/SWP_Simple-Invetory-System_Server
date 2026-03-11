@@ -15,7 +15,7 @@ import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { ProductsModule } from './products/products.module';
-
+import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
 @Global()
 @Module({
   imports: [
@@ -52,6 +52,7 @@ import { ProductsModule } from './products/products.module';
     SuppliersModule,
     MasterDataModule,
     ProductsModule,
+    SupplierPaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
