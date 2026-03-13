@@ -59,39 +59,57 @@ export class ProductsService {
   }
 
   // --- 2. LẤY DANH SÁCH (Hỗ trợ lọc & Search) ---
-  async findAll(
-    query: {
-      search?: string;
-      categoryId?: string;
-      locationId?: string;
+  async findAll(query: {
+  search?: string;
+  categoryId?: string;
+  locationId?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  sortPrice?: 'asc' | 'desc';
+}, userRole?: Role) {
+
+  const { search, categoryId, locationId } = query;
+
+  const whereCondition: any = { isActive: true };
+
+  if (search) {
+    whereCondition.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { sku: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (categoryId) {
+    whereCondition.categoryId = categoryId;
+  }
+
+  // ✅ FIX PRICE FILTER
+  // PRICE FILTER
+const priceFilter: any = {};
+
+if (query.minPrice) {
+  priceFilter.gte = Number(query.minPrice);
+}
+
+if (query.maxPrice) {
+  priceFilter.lte = Number(query.maxPrice);
+}
+
+if (Object.keys(priceFilter).length > 0) {
+  whereCondition.sellPrice = priceFilter;
+}
+
+  const products = await this.prisma.product.findMany({
+    where: whereCondition,
+    include: {
+      category: true,
+      unit: true,
+      inventory: locationId ? { where: { locationId } } : false,
     },
-    userRole?: Role,
-  ) {
-    const { search, categoryId, locationId } = query;
-
-    const whereCondition: any = { isActive: true };
-
-    if (search) {
-      whereCondition.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (categoryId) {
-      whereCondition.categoryId = categoryId;
-    }
-
-    const products = await this.prisma.product.findMany({
-      where: whereCondition,
-      include: {
-        category: true,
-        unit: true,
-        // Include tồn kho của kho cụ thể nếu được yêu cầu
-        inventory: locationId ? { where: { locationId: locationId } } : false,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    orderBy: query.sortPrice
+      ? { sellPrice: query.sortPrice }
+      : { createdAt: 'desc' },
+  });
 
     // Format lại data để trả về Total Stock hoặc Stock theo kho
     return products.map((p) => {
