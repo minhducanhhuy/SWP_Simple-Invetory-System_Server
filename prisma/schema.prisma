@@ -195,18 +195,20 @@ model Customer {
 // =========================================================
 
 enum ReasonCode {
+  BUY
+  SELL
   SCRAP
   INTERNAL_USE
   GIFT
-}
-
-enum TicketType {
-  IMPORT
-  SELL
   TRANSFER
   ADJUSTMENT // Điều chỉnh
   RETURN_TO_SUPP
   RETURN_FROM_CUST
+}
+
+enum TicketType {
+  IMPORT
+  EXPORT
 }
 
 enum TicketStatus {
