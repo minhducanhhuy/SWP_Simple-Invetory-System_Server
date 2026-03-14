@@ -18,6 +18,7 @@ import { RolesGuard } from './roles.guard';
 import { Role } from '@prisma/client';
 import { Roles } from './roles.decorator';
 import { InviteUserDto } from './dto/invite-user.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -76,5 +77,15 @@ export class AuthController {
   async acceptInvite(@Body() dto: AcceptInviteDto) {
     console.log('đã nhận được request');
     return this.authService.acceptInvite(dto);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }
