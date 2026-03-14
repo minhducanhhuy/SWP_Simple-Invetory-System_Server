@@ -25,7 +25,7 @@ export class CreateUserDto {
   @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
   @Matches(/((?=.*\d)|(?=.*\W+))(?=.*[A-Z])(?=.*[a-z]).*$/, {
     message:
-      'Mật khẩu phải có chữ hoa, chữ thường và ít nhất 1 số hoặc ký tự đặc biệt',
+      'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
   })
   password: string;
 
