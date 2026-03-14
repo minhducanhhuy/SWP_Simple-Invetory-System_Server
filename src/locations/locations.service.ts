@@ -6,7 +6,7 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class LocationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // --- 1. TẠO KHO MỚI (Tự động init inventory) ---
   async create(createLocationDto: CreateLocationDto) {
@@ -63,6 +63,26 @@ export class LocationsService {
       },
       orderBy: { name: 'asc' },
     });
+  }
+
+  // Lấy danh sách tất cả các kho đang hoạt động (Không phân quyền)
+  async findAllActive() {
+    console.log('--- START CALLING findAllActive ---');
+
+    // 1. In toàn bộ kho có trong DB (không cần điều kiện) để xem DB có bị rỗng không
+    const allLocations = await this.prisma.location.findMany();
+    console.log('1. TẤT CẢ KHO TRONG DB:', allLocations);
+
+    // 2. In số kho thỏa mãn điều kiện isActive
+    const activeLocations = await this.prisma.location.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    console.log('2. CÁC KHO IS_ACTIVE = TRUE:', activeLocations);
+
+    console.log('--- END CALLING findAllActive ---');
+
+    return activeLocations;
   }
 
   // --- 3. CÁC HAM CRUD CƠ BẢN KHÁC ---
