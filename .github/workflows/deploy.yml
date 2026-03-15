@@ -1,0 +1,23 @@
+name: Deploy Server NestJS
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VPS and Deploy Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/cv-project/server
+            git pull origin main
+            npm install
+            npm run build
+            # Tiến trình PM2 bây giờ sẽ mang tên là "server-api"
+            pm2 restart server-api || pm2 start dist/main.js --name server-api
