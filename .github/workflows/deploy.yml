@@ -15,6 +15,9 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # Lệnh siêu quan trọng: Dừng ngay lập tức nếu bất kỳ dòng lệnh nào bên dưới bị lỗi
+            set -e
+
             cd /var/www/cv-project/server
             git pull origin main
             npm install
