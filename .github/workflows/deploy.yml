@@ -18,6 +18,13 @@ jobs:
             cd /var/www/cv-project/server
             git pull origin main
             npm install
+
+            # Sinh ra Prisma Client mới nhất
+            npx prisma generate
+
+            # Chạy migrate để cập nhật cấu trúc Database an toàn
+            npx prisma migrate deploy
+
             npm run build
-            # Tiến trình PM2 bây giờ sẽ mang tên là "server-api"
-            pm2 restart server-api || pm2 start dist/main.js --name server-api
+            # Cập nhật đúng đường dẫn dist/src/main.js
+            pm2 restart server-api || pm2 start dist/src/main.js --name server-api
