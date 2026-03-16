@@ -88,7 +88,6 @@ export class SuppliersService {
 
   // 3. Lấy chi tiết (Sử dụng lại hàm calculateDebt)
   async findOne(id: string) {
-    try{
     const supplier = await this.prisma.supplier.findUnique({
       where: { id },
       include: {
@@ -109,13 +108,6 @@ export class SuppliersService {
     if (!supplier) throw new NotFoundException('Không tìm thấy NCC');
 
     return this.calculateDebt(supplier);
-    } catch (error) {
-      // Ép Backend in lỗi ra màn hình đen
-      console.error("🔥 LỖI TẠI FIND ONE:", error); 
-      
-      // Đóng gói lỗi thật sự và ném thẳng về mặt React
-      throw new InternalServerErrorException(`Lỗi thật sự là: ${error.message}`); 
-    }
   }
 
   // 4. Cập nhật
