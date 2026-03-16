@@ -17,6 +17,7 @@ import { MailService } from 'src/mail/mail.service';
 import { UsersService } from 'src/users/users.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { JwtService } from '@nestjs/jwt';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -179,5 +180,79 @@ export class AuthService {
     } catch (error) {
       throw new InternalServerErrorException('Registration failed');
     }
+  }
+
+  // --- 1. Xử lý Yêu cầu quên mật khẩu ---
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.email || !user.fullName) {
+      // Để bảo mật, không nên báo lỗi "Email không tồn tại". Cứ trả về thành công chung chung.
+      return {
+        message:
+          'Nếu email tồn tại trong hệ thống, hướng dẫn khôi phục đã được gửi.',
+      };
+    }
+
+    // Tạo token ngẫu nhiên
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Hết hạn sau 1 giờ
+
+    // Lưu vào DB
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: token,
+        resetTokenExpiresAt: expiresAt,
+      },
+    });
+
+    // Gửi mail
+    await this.mailService.sendPasswordResetEmail(
+      user.email,
+      token,
+      user.fullName,
+    );
+
+    return {
+      message: 'Hướng dẫn khôi phục mật khẩu đã được gửi tới email của bạn.',
+    };
+  }
+
+  // --- 2. Xử lý Đặt lại mật khẩu (Khi có token) ---
+  async resetPassword(dto: ResetPasswordDto) {
+    const { token, newPassword } = dto;
+
+    // Tìm user có token này và token chưa hết hạn
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiresAt: {
+          gt: new Date(), // Thời gian hết hạn phải lớn hơn hiện tại
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException(
+        'Mã khôi phục không hợp lệ hoặc đã hết hạn.',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Cập nhật pass mới và xóa token
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiresAt: null,
+      },
+    });
+
+    return {
+      message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay.',
+    };
   }
 }
