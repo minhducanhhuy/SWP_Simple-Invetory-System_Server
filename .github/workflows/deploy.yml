@@ -28,6 +28,8 @@ jobs:
             # db
             npx prisma db push --force-reset
 
+            npx prisma db seed
+
             npm run build
             # Cập nhật đúng đường dẫn dist/src/main.js
             pm2 restart server-api || pm2 start dist/src/main.js --name server-api
