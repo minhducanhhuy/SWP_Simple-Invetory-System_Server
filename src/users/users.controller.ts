@@ -72,4 +72,11 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
+
+  // --- 3. ADMIN CẬP NHẬT TRẠNG THÁI (ACTIVE/LOCKED) ---
+  @Roles(Role.ADMIN_SYSTEM, Role.OWNER)
+  @Patch(':id/status')
+  updateStatus(@Param('id') id: string, @Body('isActive') isActive: boolean) {
+    return this.usersService.updateStatus(id, isActive);
+  }
 }

@@ -29,7 +29,7 @@ export class ProductsController {
   // --- TẠO SẢN PHẨM ---
   // Yêu cầu: Phải là ADMIN hoặc MANAGER
   @Post()
-  @Roles(Role.OWNER, Role.MANAGER) // Cho phép cả nhân viên kho tạo
+  @Roles(Role.OWNER, Role.MANAGER, Role.WAREHOUSE_STAFF) //Cho phép cả nhân viên tạo
   create(@Body() createProductDto: CreateProductDto) {
     // Truyền userId vào service để ghi log người tạo
     return this.productsService.create(createProductDto);
@@ -38,17 +38,20 @@ export class ProductsController {
   // Yêu cầu: Chỉ cần đăng nhập (đã được bao bởi @UseGuards ở trên)
   // Nhân viên kho (WAREHOUSE_STAFF) hay Thu ngân (SALESPERSON) đều cần xem để bán/nhập hàng
   @Get()
-  findAll(
-    @Query('search') search: string,
-    @Query('categoryId') categoryId: string,
-    @Headers('x-location-id') locationId: string,
-    @Request() req,
-  ) {
-    return this.productsService.findAll(
-      { search, categoryId, locationId },
-      req.user.role,
-    );
-  }
+findAll(
+  @Query('search') search: string,
+  @Query('categoryId') categoryId: string,
+  @Query('minPrice') minPrice: string,
+  @Query('maxPrice') maxPrice: string,
+  @Query('sortPrice') sortPrice: 'asc' | 'desc',
+  @Headers('x-location-id') locationId: string,
+  @Request() req,
+) {
+  return this.productsService.findAll(
+    { search, categoryId, locationId, minPrice, maxPrice, sortPrice },
+    req.user?.role,
+  );
+}
 
   // --- LẤY CHI TIẾT 1 SP ---
   @Get(':id')

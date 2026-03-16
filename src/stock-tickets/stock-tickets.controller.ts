@@ -17,12 +17,12 @@ export class StockTicketsController {
   @Post()
   @UseGuards(JwtAuthGuard) // Bắt buộc đăng nhập
   async create(@Body() createStockTicketDto: CreateStockTicketDto, @Req() req) {
-    //const user = req.user;
+    const user = req.user;
 
-     const user = {
-     id: '65b18f1b-3629-48c8-810c-d7417b9dc054', 
-     role: 'MANAGER' // test postman k token 
-   };
+    //    const user = {
+    //    id: '65b18f1b-3629-48c8-810c-d7417b9dc054', 
+    //    role: 'MANAGER' // test postman k token 
+    //  };
 
     // Phân quyền: Salesperson không được tạo phiếu IMPORT
     if (user.role === Role.SALESPERSON && createStockTicketDto.type === TicketType.IMPORT) {

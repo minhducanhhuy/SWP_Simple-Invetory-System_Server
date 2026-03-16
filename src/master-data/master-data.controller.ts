@@ -9,15 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { MasterDataService } from './master-data.service';
+import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { CreateUnitDto, UpdateUnitDto } from './dto/unit.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Roles } from 'src/auth/roles.decorator';
 import { Role } from '@prisma/client';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { CreateUnitDto, UpdateUnitDto } from './dto/unit.dto';
 
 @Controller('master-data')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class MasterDataController {
   constructor(private readonly masterDataService: MasterDataService) {}
 
@@ -69,5 +68,17 @@ export class MasterDataController {
   @Roles(Role.ADMIN_SYSTEM)
   removeUnit(@Param('id') id: string) {
     return this.masterDataService.removeUnit(id);
+  }
+
+  @Post('categories/sync')
+  @Roles(Role.ADMIN_SYSTEM)
+  syncCategories(@Body() dtos: CreateCategoryDto[]) {
+    return this.masterDataService.syncCategories(dtos);
+  }
+
+  @Post('units/sync')
+  @Roles(Role.ADMIN_SYSTEM)
+  syncUnits(@Body() dtos: CreateUnitDto[]) {
+    return this.masterDataService.syncUnits(dtos);
   }
 }

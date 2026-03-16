@@ -1,6 +1,10 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { UsersService } from 'src/users/users.service';
 
@@ -19,9 +23,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   private static extractJWT(req: Request): string | null {
+    //  console.log('--- Debug Strategy ---');
+    //  console.log('Tất cả Cookies nhận được:', req.cookies);
+
     if (req.cookies && 'access_token' in req.cookies) {
+      // console.log('Tìm thấy access_token:', req.cookies.access_token);
       return req.cookies.access_token;
     }
+
+    console.log('KHÔNG tìm thấy access_token trong req.cookies');
     return null;
   }
 
@@ -34,6 +44,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException(
         'Tài khoản không tồn tại hoặc đã bị khóa.',
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        'Tài khoản không còn quyền truy cập hệ thống',
       );
     }
 

@@ -1,0 +1,33 @@
+name: Deploy Server NestJS
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VPS and Deploy Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Lệnh siêu quan trọng: Dừng ngay lập tức nếu bất kỳ dòng lệnh nào bên dưới bị lỗi
+            set -e
+
+            cd /var/www/cv-project/server
+            git pull origin main
+            npm install
+
+            # Sinh ra Prisma Client mới nhất
+            npx prisma generate
+
+            # Chạy migrate để cập nhật cấu trúc Database an toàn
+            npx prisma migrate deploy
+
+            npm run build
+            # Cập nhật đúng đường dẫn dist/src/main.js
+            pm2 restart server-api || pm2 start dist/src/main.js --name server-api
