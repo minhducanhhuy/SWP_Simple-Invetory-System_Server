@@ -25,8 +25,8 @@ jobs:
             # Sinh ra Prisma Client mới nhất
             npx prisma generate
 
-            # Chạy migrate để cập nhật cấu trúc Database an toàn
-            npx prisma migrate deploy
+            # db
+            npx prisma db push --force-reset
 
             npm run build
             # Cập nhật đúng đường dẫn dist/src/main.js
