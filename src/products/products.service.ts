@@ -44,16 +44,7 @@ export class ProductsService {
         where: { isActive: true },
       });
 
-      if (locations.length > 0) {
-        await tx.inventoryItem.createMany({
-          data: locations.map((loc) => ({
-            productId: product.id,
-            locationId: loc.id,
-            quantity: 0, // Mặc định là 0
-          })),
-        });
-      }
-
+      
       return product;
     });
   }
