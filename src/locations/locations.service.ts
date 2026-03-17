@@ -6,7 +6,7 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class LocationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // --- 1. TẠO KHO MỚI (Tự động init inventory) ---
   async create(createLocationDto: CreateLocationDto) {
@@ -46,7 +46,6 @@ export class LocationsService {
     // Nếu là Sếp (OWNER, ADMIN) -> Xem hết
     if (user.role === Role.ADMIN_SYSTEM || user.role === Role.OWNER) {
       return this.prisma.location.findMany({
-        where: { isActive: true },
         orderBy: { name: 'asc' },
       });
     }
@@ -65,6 +64,26 @@ export class LocationsService {
     });
   }
 
+  // Lấy danh sách tất cả các kho đang hoạt động (Không phân quyền)
+  async findAllActive() {
+    console.log('--- START CALLING findAllActive ---');
+
+    // 1. In toàn bộ kho có trong DB (không cần điều kiện) để xem DB có bị rỗng không
+    const allLocations = await this.prisma.location.findMany();
+    console.log('1. TẤT CẢ KHO TRONG DB:', allLocations);
+
+    // 2. In số kho thỏa mãn điều kiện isActive
+    const activeLocations = await this.prisma.location.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    console.log('2. CÁC KHO IS_ACTIVE = TRUE:', activeLocations);
+
+    console.log('--- END CALLING findAllActive ---');
+
+    return activeLocations;
+  }
+
   // --- 3. CÁC HAM CRUD CƠ BẢN KHÁC ---
   async findOne(id: string) {
     return this.prisma.location.findUnique({
@@ -72,65 +91,82 @@ export class LocationsService {
     });
   }
 
+  // --- CẬP NHẬT THÔNG TIN VÀ TRẠNG THÁI KHO ---
   async update(id: string, updateLocationDto: UpdateLocationDto) {
+    // Nếu có yêu cầu TẮT kho (Vô hiệu hóa)
+    if (updateLocationDto.isActive === false) {
+      // 1. Kiểm tra nhân viên
+      const staffCount = await this.prisma.userLocation.count({
+        where: { locationId: id },
+      });
+      if (staffCount > 0) {
+        throw new BadRequestException(
+          'Không thể vô hiệu hóa! Vui lòng gỡ tất cả nhân viên khỏi kho này trước.',
+        );
+      }
+
+      // 2. Kiểm tra tồn kho
+      const hasInventory = await this.prisma.inventoryItem.findFirst({
+        where: { locationId: id, quantity: { gt: 0 } },
+      });
+      if (hasInventory) {
+        throw new BadRequestException(
+          'Không thể vô hiệu hóa! Kho vẫn còn hàng tồn. Vui lòng xuất hoặc điều chuyển hết hàng trước.',
+        );
+      }
+    }
+
+    // Nếu hợp lệ (hoặc chỉ sửa tên/địa chỉ, hoặc bật lại kho) -> Tiến hành cập nhật
     return this.prisma.location.update({
       where: { id },
       data: updateLocationDto,
     });
   }
 
-  // [MỚI] Hàm xóa kho
+  // ==================================================
+  // XÓA KHO (HARD DELETE)
+  // ==================================================
   async remove(id: string) {
-    // 1. Kiểm tra xem kho có đang chứa hàng không
-    const hasInventory = await this.prisma.inventoryItem.findFirst({
-      where: {
-        locationId: id,
-        quantity: { gt: 0 }, // Số lượng > 0
-      },
+    // 1. Kiểm tra xem kho có nhân viên nào không
+    const staffCount = await this.prisma.userLocation.count({
+      where: { locationId: id },
     });
+    if (staffCount > 0) {
+      throw new BadRequestException(
+        'Không thể xóa! Kho này vẫn đang có nhân viên được gán. Vui lòng gỡ quyền nhân viên trước.',
+      );
+    }
 
+    // 2. Kiểm tra xem kho có đang chứa hàng không (số lượng > 0)
+    const hasInventory = await this.prisma.inventoryItem.findFirst({
+      where: { locationId: id, quantity: { gt: 0 } },
+    });
     if (hasInventory) {
       throw new BadRequestException(
-        'Không thể xóa kho đang còn hàng tồn! Vui lòng chuyển hết hàng hoặc điều chỉnh về 0 trước khi xóa.',
+        'Không thể xóa! Kho vẫn còn hàng tồn. Vui lòng điều chuyển hết hàng trước.',
       );
     }
 
-    // 2. Kiểm tra xem kho đã có lịch sử phiếu chưa (Source hoặc Dest)
+    // 3. Kiểm tra xem kho đã có lịch sử giao dịch chưa
     const hasTickets = await this.prisma.stockTicket.findFirst({
-      where: {
-        OR: [{ sourceLocationId: id }, { destLocationId: id }],
-      },
+      where: { OR: [{ sourceLocationId: id }, { destLocationId: id }] },
     });
-
-    // Nếu đã có lịch sử phiếu -> Chỉ cho phép "Ngưng hoạt động" (Soft Delete)
     if (hasTickets) {
-      // Option A: Tự động chuyển sang Soft Delete
-      /*
-       return this.prisma.location.update({
-         where: { id },
-         data: { isActive: false },
-       });
-       */
-
-      // Option B: Báo lỗi yêu cầu người dùng tự khóa thủ công (Chọn cách này an toàn hơn)
       throw new BadRequestException(
-        'Kho này đã có phát sinh giao dịch nhập/xuất. Bạn chỉ có thể "Tạm khóa" (Sửa -> Trạng thái) thay vì xóa vĩnh viễn.',
+        'Kho này đã từng có giao dịch nhập/xuất nên không thể xóa vĩnh viễn. Vui lòng dùng tính năng "Vô hiệu hóa" (Khóa kho).',
       );
     }
 
-    // 3. Nếu kho rỗng và chưa có lịch sử -> Xóa vĩnh viễn
-    // Cần xóa các ràng buộc Inventory = 0 trước (nếu có)
-    await this.prisma.inventoryItem.deleteMany({
-      where: { locationId: id },
-    });
+    // 4. Hợp lệ -> Tiến hành xóa
+    // Cần xóa các dòng inventory (số lượng = 0) của kho này trước để không dính khóa ngoại
+    return await this.prisma.$transaction(async (tx) => {
+      await tx.inventoryItem.deleteMany({
+        where: { locationId: id },
+      });
 
-    // Xóa phân quyền user tại kho này
-    await this.prisma.userLocation.deleteMany({
-      where: { locationId: id },
-    });
-
-    return this.prisma.location.delete({
-      where: { id },
+      return tx.location.delete({
+        where: { id },
+      });
     });
   }
 }

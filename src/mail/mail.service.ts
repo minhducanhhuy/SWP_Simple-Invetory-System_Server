@@ -43,4 +43,24 @@ export class MailService {
       `,
     });
   }
+
+  // Trong class MailService
+  // --- MỚI: Gửi email quên mật khẩu ---
+  async sendPasswordResetEmail(email: string, token: string, fullName: string) {
+    const url = `http://localhost:3000/reset-password?token=${token}`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Yêu cầu đặt lại mật khẩu - IMS Enterprise',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+          <h2>Xin chào ${fullName || 'bạn'},</h2>
+          <p>Hệ thống nhận được yêu cầu đặt lại mật khẩu cho tài khoản liên kết với email này.</p>
+          <p>Vui lòng click vào nút bên dưới để thiết lập mật khẩu mới (Link này chỉ có hiệu lực trong <b>1 giờ</b>):</p>
+          <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 15px 0;">Đặt lại mật khẩu</a>
+          <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+        </div>
+      `,
+    });
+  }
 }

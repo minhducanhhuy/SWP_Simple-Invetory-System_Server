@@ -1,15 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { StockTicketsService } from './stock-tickets.service';
 import { CreateStockTicketDto } from './dto/create-stock-ticket.dto';
-import { UpdateStockTicketDto } from './dto/update-stock-ticket.dto';
+import { JwtAuthGuard } from '../../src/auth/jwt-auth.guard';
+import { Role, TicketType } from '@prisma/client';
 
 @Controller('stock-tickets')
 export class StockTicketsController {
-  constructor(private readonly stockTicketsService: StockTicketsService) {}
+  constructor(private readonly stockTicketsService: StockTicketsService) { }
+
+  // 1. API này cực kỳ quan trọng cho reason codes
+  @Get('reasons')
+  findAllReasons() {
+    return this.stockTicketsService.getReasonCodes();
+  }
 
   @Post()
-  create(@Body() createStockTicketDto: CreateStockTicketDto) {
-    return this.stockTicketsService.create(createStockTicketDto);
+  @UseGuards(JwtAuthGuard) // Bắt buộc đăng nhập
+  async create(@Body() createStockTicketDto: CreateStockTicketDto, @Req() req) {
+    const user = req.user;
+
+    //    const user = {
+    //    id: '65b18f1b-3629-48c8-810c-d7417b9dc054', 
+    //    role: 'MANAGER' // test postman k token 
+    //  };
+
+    // Phân quyền: Salesperson không được tạo phiếu IMPORT
+    if (user.role === Role.SALESPERSON && createStockTicketDto.type === TicketType.IMPORT) {
+      throw new ForbiddenException('Bạn không có quyền tạo phiếu Nhập kho');
+    }
+
+    return this.stockTicketsService.create(createStockTicketDto, user.id);
   }
 
   @Get()
@@ -19,16 +39,6 @@ export class StockTicketsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.stockTicketsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateStockTicketDto: UpdateStockTicketDto) {
-    return this.stockTicketsService.update(+id, updateStockTicketDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.stockTicketsService.remove(+id);
+    return this.stockTicketsService.findOne(id);
   }
 }
