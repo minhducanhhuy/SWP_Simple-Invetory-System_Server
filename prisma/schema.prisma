@@ -90,7 +90,7 @@ model UserLocation {
 // Danh mục: Đồ uống, Đồ ăn nhanh, Hóa mỹ phẩm...
 model Category {
   id          String    @id @default(uuid())
-  name        String
+  name        String    @unique
   description String?
   products    Product[]
   @@map("categories")

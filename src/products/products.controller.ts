@@ -24,7 +24,7 @@ import { RolesGuard } from 'src/auth/roles.guard';
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard) // 1. Áp dụng Guard cấp Controller: Phải đăng nhập mới gọi được API
 export class ProductsController {
-  
+  constructor(private readonly productsService: ProductsService) {}
 
   // --- TẠO SẢN PHẨM ---
   // Yêu cầu: Phải là ADMIN hoặc MANAGER
