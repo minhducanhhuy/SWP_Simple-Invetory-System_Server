@@ -137,7 +137,8 @@ model Product {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  supplierId  String?   // <--- THÊM DÒNG NÀY
+  supplier    Supplier? @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
   @@map("products")
 }
 
@@ -177,7 +178,7 @@ model Supplier {
   
   tickets     StockTicket[]     
   payments    SupplierPayment[] 
-
+products    Product[] // <--- THÊM DÒNG NÀY
   @@map("suppliers")
 }
 
@@ -212,10 +213,13 @@ enum ReasonCode {
 enum TicketType {
   IMPORT
   EXPORT
+  STOCKTAKE  // 
 }
 
 enum TicketStatus {
   DRAFT
+  PENDING_APPROVAL   // [THÊM MỚI] Chờ Manager duyệt (cho Kiểm kê & Yêu cầu chuyển kho)
+  IN_TRANSIT         // [THÊM MỚI] Đang luân chuyển (cho Chuyển kho)
   COMPLETED
   CANCELLED
 }
@@ -249,6 +253,8 @@ model StockTicket {
 
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+
+ 
   @@map("stock_tickets")
 }
 
@@ -264,7 +270,10 @@ model StockTransaction {
   quantity  Int
   originalCost Decimal  @default(0) @db.Decimal(15, 2)      
   price     Decimal     @db.Decimal(15, 2) 
-  
+   // --- [THÊM MỚI] CÁC CỘT PHỤC VỤ KIỂM KÊ & TRANSFER ---
+  systemQty    Int?        // Số lượng tồn trên máy lúc bắt đầu kiểm kê
+  actualQty    Int?        // Số lượng đếm thực tế (hoặc thực nhận khi chuyển kho)
+  note         String?
   @@map("stock_transactions")
 }
 

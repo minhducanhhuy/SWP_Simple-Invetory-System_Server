@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, ForbiddenException, Patch } from '@nestjs/common';
 import { StockTicketsService } from './stock-tickets.service';
 import { CreateStockTicketDto } from './dto/create-stock-ticket.dto';
 import { JwtAuthGuard } from '../../src/auth/jwt-auth.guard';
@@ -40,5 +40,26 @@ export class StockTicketsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.stockTicketsService.findOne(id);
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(JwtAuthGuard)
+  async approve(@Param('id') id: string, @Req() req) {
+    const user = req.user;
+    // Cho phép cả MANAGER và OWNER duyệt
+    if (user.role !== Role.MANAGER && user.role !== Role.OWNER) {
+      throw new ForbiddenException('Bạn không có quyền duyệt phiếu');
+    }
+    return this.stockTicketsService.approve(id);
+  }
+
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  async cancel(@Param('id') id: string, @Req() req, @Body('reason') reason: string) {
+    const user = req.user;
+    if (user.role !== Role.MANAGER && user.role !== Role.OWNER) {
+      throw new ForbiddenException('Bạn không có quyền từ chối phiếu');
+    }
+    return this.stockTicketsService.cancel(id, reason); // Truyền reason xuống service
   }
 }

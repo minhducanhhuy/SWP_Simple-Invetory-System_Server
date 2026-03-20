@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TicketType, TicketStatus, ReasonCode } from '@prisma/client';
-
+import { IsDateString } from 'class-validator'; // <--- Thêm import này ở trên cùng
 class TicketDetailDto {
   @IsNotEmpty()
   @IsString()
@@ -20,13 +20,29 @@ class TicketDetailDto {
 
   @IsNotEmpty()
   @IsNumber()
-  @Min(1)
+  @Min(0)
   quantity: number;
 
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
   price: number; // Giá nhập hoặc giá bán tại thời điểm tạo phiếu
+
+  @IsOptional()
+  @IsNumber()
+  systemQty?: number;
+
+  @IsOptional()
+  @IsNumber()
+  actualQty?: number;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @IsOptional()
+  @IsDateString()
+  date?: string; // <--- Thêm dòng này vào DTO
 }
 
 export class CreateStockTicketDto {
