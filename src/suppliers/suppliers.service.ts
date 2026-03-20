@@ -71,6 +71,7 @@ export class SuppliersService {
   // 2. Lấy danh sách (Có thể mở rộng thêm search/filter sau này)
   async findAll() {
     const suppliers = await this.prisma.supplier.findMany({
+      where: { isActive: true },
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { tickets: true } },
@@ -89,13 +90,23 @@ export class SuppliersService {
   // 3. Lấy chi tiết (Sử dụng lại hàm calculateDebt)
   async findOne(id: string) {
     const supplier = await this.prisma.supplier.findUnique({
-      where: { id },
+      where: { id, isActive: true },
       include: {
         tickets: {
           where: {
             reason: ReasonCode.BUY,
           },
-          include: { details: true, creator: { select: { fullName: true } } },
+          include: { 
+           // Thay vì chỉ details: true, ta mở rộng nó ra để include product
+            details: {
+              include: {
+                product: {
+                  select: { name: true, sku: true } // Lấy name và sku từ bảng Product
+                }
+              }
+            }, 
+            creator: { select: { fullName: true } } 
+          },
           orderBy: { createdAt: 'desc' },
         },
         payments: {
@@ -118,6 +129,7 @@ export class SuppliersService {
         where: {
           code: updateSupplierDto.code,
           id: { not: id },
+          isActive: true,
         },
       });
       if (exist)
@@ -127,29 +139,16 @@ export class SuppliersService {
     }
 
     return await this.prisma.supplier.update({
-      where: { id },
+      where: { id, isActive: true },
       data: updateSupplierDto,
     });
   }
 
-  // 5. Xóa
+  // 5. Xóa (Soft delete)
   async remove(id: string) {
-    // Check xem NCC này đã có giao dịch (phiếu nhập/chi) chưa
-    const countTicket = await this.prisma.stockTicket.count({
-      where: { supplierId: id },
-    });
-    const countPayment = await this.prisma.supplierPayment.count({
-      where: { supplierId: id },
-    });
-
-    if (countTicket > 0 || countPayment > 0) {
-      throw new BadRequestException(
-        'Không thể xóa NCC đã phát sinh giao dịch. Hãy chỉ sửa thông tin!',
-      );
-    }
-
-    return await this.prisma.supplier.delete({
-      where: { id },
+    return await this.prisma.supplier.update({
+      where: { id, isActive: true },
+      data: { isActive: false },
     });
   }
 }
