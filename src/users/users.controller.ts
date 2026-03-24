@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard'; // Sẽ tạo ở bước sau
 import { Roles } from 'src/auth/roles.decorator';
 import { Role } from '@prisma/client';
@@ -43,10 +43,16 @@ export class UsersController {
   //   }
 
   // --- 1. USER TỰ CẬP NHẬT PROFILE (Tên, SĐT, Pass) ---
+  // API 1: Cập nhật Profile
   @Patch('profile')
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    // req.user.id lấy từ token (đảm bảo chính chủ)
     return this.usersService.updateProfile(req.user.id, updateUserDto);
+  }
+
+  // API 2: Đổi mật khẩu
+  @Patch('change-password')
+  changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.usersService.changePassword(req.user.id, changePasswordDto);
   }
 
   // --- 2. ADMIN CẬP NHẬT ROLE NGƯỜI KHÁC ---
