@@ -14,12 +14,17 @@ export class CreateUserDto {
   @IsNotEmpty()
   fullName: string;
 
+  @IsOptional()
   @IsEmail()
   email: string;
 
   @IsString()
   @IsNotEmpty()
   username: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Địa chỉ không được để trống' }) // <--- BẮT BUỘC
+  address: string;
 
   @IsString()
   @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })

@@ -129,6 +129,7 @@ export class UsersService {
     if (dto.password) {
       dataToUpdate.password = await bcrypt.hash(dto.password, 10);
     }
+    if (dto.address) dataToUpdate.address = dto.address;
 
     // Tuyệt đối KHÔNG update role, email, username ở đây
     const user = await this.prisma.user.update({
