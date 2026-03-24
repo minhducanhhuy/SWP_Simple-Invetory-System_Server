@@ -87,7 +87,7 @@ export class AuthService {
 
   // --- 2. USER GỌI HÀM NÀY KHI CLICK LINK & SUBMIT FORM ---
   async acceptInvite(dto: AcceptInviteDto) {
-    const { token, username, password, fullName, phone } = dto;
+    const { token, username, password, address, fullName, phone } = dto;
 
     // 1. Validate Token (Logic nghiệp vụ của Auth - Giữ nguyên)
     const invitation = await this.prisma.userInvitation.findUnique({
@@ -113,6 +113,7 @@ export class AuthService {
         password, // UsersService sẽ tự hash
         fullName,
         phone,
+        address,
         email: invitation.email, // Quan trọng: Lấy email gốc từ lời mời để bảo mật
         role: invitation.role, // Quan trọng: Lấy role gốc từ lời mời
       });

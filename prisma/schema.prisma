@@ -26,6 +26,7 @@ model User {
   password         String
   fullName         String?
   email            String?         @unique
+  address          String?
   phone            String?
   role             Role            @default(STAFF)
 
