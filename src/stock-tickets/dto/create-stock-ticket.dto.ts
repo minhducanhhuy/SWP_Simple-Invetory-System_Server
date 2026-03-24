@@ -66,9 +66,12 @@ export class CreateStockTicketDto {
   @IsString()
   supplierId?: string; // Dùng cho IMPORT
 
+
+
   @IsOptional()
   @IsString()
   customerId?: string; // Dùng cho SELL
+
 
   @IsOptional()
   @IsString()
