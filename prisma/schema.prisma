@@ -21,25 +21,25 @@ enum Role {
 }
 
 model User {
-  id               String          @id @default(uuid())
-  username         String          @unique
-  password         String
-  fullName         String?
-  email            String?         @unique
-  phone            String?
-  role             Role            @default(STAFF)
+  id       String  @id @default(uuid())
+  username String  @unique
+  password String
+  fullName String?
+  email    String? @unique
+  phone    String?
+  role     Role    @default(STAFF)
 
   resetToken          String?   @unique
   resetTokenExpiresAt DateTime?
-  
-  assignedLocations UserLocation[]
-  
-  createdTickets   StockTicket[]
-  createdPayments  SupplierPayment[]
 
-  isActive         Boolean         @default(true)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  assignedLocations UserLocation[]
+
+  createdTickets  StockTicket[]
+  createdPayments SupplierPayment[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
@@ -56,18 +56,19 @@ model UserInvitation {
 }
 
 model Location {
-  id            String          @id @default(uuid())
-  code          String          @unique 
-  name          String   
-  address       String?
-  
+  id      String  @id @default(uuid())
+  code    String  @unique
+  name    String
+  address String?
+
   assignedUsers UserLocation[]
   inventory     InventoryItem[]
 
-  sourceTickets StockTicket[]   @relation("SourceLocation")
-  destTickets   StockTicket[]   @relation("DestLocation")
+  sourceTickets StockTicket[] @relation("SourceLocation")
+  destTickets   StockTicket[] @relation("DestLocation")
 
-  isActive      Boolean         @default(true)
+  isActive Boolean @default(true)
+
   @@map("locations")
 }
 
@@ -93,52 +94,56 @@ model Category {
   name        String    @unique
   description String?
   products    Product[]
+
   @@map("categories")
 }
 
 // Đơn vị tính: Cái, Lon, Hộp, Thùng, Lốc... (US23)
 model Unit {
-  id        String    @id @default(uuid())
-  name      String    @unique // Tên đơn vị
-  products  Product[] 
+  id       String    @id @default(uuid())
+  name     String    @unique // Tên đơn vị
+  products Product[]
+
   @@map("units")
 }
 
 // Sản phẩm 
 model Product {
-  id          String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // 1. Định danh
-  sku         String   @unique // Mã vạch (Barcode) in trên bao bì
-  name        String   // Tên SP: "Coca Cola 330ml"
+  sku         String  @unique // Mã vạch (Barcode) in trên bao bì
+  name        String // Tên SP: "Coca Cola 330ml"
   imageUrl    String?
   description String?
 
   // 2. Phân loại
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
   // 3. Đơn vị tính (Quan trọng với Mini Mart)
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id])
+
   // 4. Giá cả
-  costPrice   Decimal  @default(0) @db.Decimal(15, 2) // Giá nhập
-  sellPrice   Decimal  @default(0) @db.Decimal(15, 2) // Giá bán lẻ
+  costPrice Decimal @default(0) @db.Decimal(15, 2) // Giá nhập
+  sellPrice Decimal @default(0) @db.Decimal(15, 2) // Giá bán lẻ
 
   // 5. Cài đặt kho
-  minStockLevel Int    @default(10) // Cảnh báo khi dưới mức này
-  maxStockLevel Int?   
+  minStockLevel Int  @default(10) // Cảnh báo khi dưới mức này
+  maxStockLevel Int?
 
   // 6. Quan hệ
-  inventory   InventoryItem[]    // Tồn kho ở các chi nhánh
+  suppliers    ProductSupplier[]
+  inventory    InventoryItem[] // Tồn kho ở các chi nhánh
   transactions StockTransaction[] // Lịch sử nhập xuất
 
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  supplierId  String?   // <--- THÊM DÒNG NÀY
-  supplier    Supplier? @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId String?
+
   @@map("products")
 }
 
@@ -147,19 +152,19 @@ model Product {
 // =========================================================
 
 model InventoryItem {
-  id         String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
-  
-  productId  String   // Đổi từ productVariantId -> productId
-  product    Product  @relation(fields: [productId], references: [id])
-  
-  quantity   Int      @default(0) 
 
-  updatedAt  DateTime @updatedAt
-  
-  @@unique([locationId, productId]) 
+  productId String // Đổi từ productVariantId -> productId
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([locationId, productId])
   @@map("inventory_items")
 }
 
@@ -168,29 +173,32 @@ model InventoryItem {
 // =========================================================
 
 model Supplier {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          String  @id @default(uuid())
+  code        String  @unique
   name        String
   phone       String?
   email       String?
   address     String?
-  initialDebt Decimal  @default(0) @db.Decimal(15, 2)
-  isActive    Boolean  @default(true)
-  
-  tickets     StockTicket[]     
-  payments    SupplierPayment[] 
-products    Product[] // <--- THÊM DÒNG NÀY
+  initialDebt Decimal @default(0) @db.Decimal(15, 2)
+  isActive    Boolean @default(true)
+
+  tickets  StockTicket[]
+  payments SupplierPayment[]
+
+  products        Product[] // Quan hệ ngược lại
+  ProductSupplier ProductSupplier[]
+
   @@map("suppliers")
 }
 
 model Customer {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  name        String
-  phone       String?  @unique
-  address     String?
-  
-  tickets     StockTicket[] 
+  id      String  @id @default(uuid())
+  code    String  @unique
+  name    String
+  phone   String? @unique
+  address String?
+
+  tickets StockTicket[]
 
   @@map("customers")
 }
@@ -214,79 +222,94 @@ enum ReasonCode {
 enum TicketType {
   IMPORT
   EXPORT
-  STOCKTAKE  // 
+  STOCKTAKE // 
 }
 
 enum TicketStatus {
   DRAFT
-  PENDING_APPROVAL   // [THÊM MỚI] Chờ Manager duyệt (cho Kiểm kê & Yêu cầu chuyển kho)
-  IN_TRANSIT         // [THÊM MỚI] Đang luân chuyển (cho Chuyển kho)
+  PENDING_APPROVAL // [THÊM MỚI] Chờ Manager duyệt (cho Kiểm kê & Yêu cầu chuyển kho)
+  IN_TRANSIT // [THÊM MỚI] Đang luân chuyển (cho Chuyển kho)
   COMPLETED
   CANCELLED
 }
 
 model StockTicket {
-  id               String       @id @default(uuid())
-  code             String       @unique 
-  type             TicketType
-  status           TicketStatus @default(COMPLETED)
-  note             String?
-  date             DateTime     @default(now())
- 
-  reason           ReasonCode?
+  id     String       @id @default(uuid())
+  code   String       @unique
+  type   TicketType
+  status TicketStatus @default(COMPLETED)
+  note   String?
+  date   DateTime     @default(now())
 
-  creatorId        String
-  creator          User         @relation(fields: [creatorId], references: [id])
-  
-  supplierId       String?
-  supplier         Supplier?    @relation(fields: [supplierId], references: [id])
-  
-  customerId       String?
-  customer         Customer?    @relation(fields: [customerId], references: [id])
+  reason ReasonCode?
 
-  sourceLocationId String?   
-  sourceLocation   Location?    @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
 
-  destLocationId   String?   
-  destLocation     Location?    @relation("DestLocation", fields: [destLocationId], references: [id])
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
-  details          StockTransaction[]
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
 
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  sourceLocationId String?
+  sourceLocation   Location? @relation("SourceLocation", fields: [sourceLocationId], references: [id])
 
- 
+  destLocationId String?
+  destLocation   Location? @relation("DestLocation", fields: [destLocationId], references: [id])
+
+  details StockTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("stock_tickets")
 }
 
 model StockTransaction {
-  id        String      @id @default(uuid())
-  
-  ticketId  String
-  ticket    StockTicket @relation(fields: [ticketId], references: [id])
-  
-  productId String      
-  product   Product     @relation(fields: [productId], references: [id])
-  
-  quantity  Int
-  originalCost Decimal  @default(0) @db.Decimal(15, 2)      
-  price     Decimal     @db.Decimal(15, 2) 
-   // --- [THÊM MỚI] CÁC CỘT PHỤC VỤ KIỂM KÊ & TRANSFER ---
-  systemQty    Int?        // Số lượng tồn trên máy lúc bắt đầu kiểm kê
-  actualQty    Int?        // Số lượng đếm thực tế (hoặc thực nhận khi chuyển kho)
+  id String @id @default(uuid())
+
+  ticketId String
+  ticket   StockTicket @relation(fields: [ticketId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity     Int
+  originalCost Decimal @default(0) @db.Decimal(15, 2)
+  price        Decimal @db.Decimal(15, 2)
+  // --- [THÊM MỚI] CÁC CỘT PHỤC VỤ KIỂM KÊ & TRANSFER ---
+  systemQty    Int? // Số lượng tồn trên máy lúc bắt đầu kiểm kê
+  actualQty    Int? // Số lượng đếm thực tế (hoặc thực nhận khi chuyển kho)
   note         String?
+
   @@map("stock_transactions")
 }
 
 model SupplierPayment {
-  id            String       @id @default(uuid())
-  code          String       @unique 
-  supplierId    String
-  supplier      Supplier     @relation(fields: [supplierId], references: [id])
-  amount        Decimal      @db.Decimal(15, 2)
-  date          DateTime     @default(now())
-  note          String?
-  creatorId     String
-  creator       User         @relation(fields: [creatorId], references: [id])
+  id         String   @id @default(uuid())
+  code       String   @unique
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  amount     Decimal  @db.Decimal(15, 2)
+  date       DateTime @default(now())
+  note       String?
+  creatorId  String
+  creator    User     @relation(fields: [creatorId], references: [id])
+
   @@map("supplier_payments")
+}
+
+model ProductSupplier {
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Bạn có thể thêm trường này để biết NCC nào là NCC chính (Tùy chọn)
+  isPrimary Boolean @default(false)
+
+  @@id([productId, supplierId]) // Khóa chính tổ hợp: Một SP không thể trùng 1 NCC 2 lần
+  @@map("product_suppliers")
 }

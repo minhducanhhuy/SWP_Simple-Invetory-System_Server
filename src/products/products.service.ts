@@ -14,7 +14,7 @@ export class ProductsService {
 
   // --- 1. TẠO SẢN PHẨM MỚI ---
   async create(createProductDto: CreateProductDto) {
-    const { ...productData } = createProductDto;
+    const { supplierIds, ...productData } = createProductDto;
 
     // Check trùng SKU
     const exist = await this.prisma.product.findUnique({
@@ -35,7 +35,13 @@ export class ProductsService {
           minStockLevel: productData.minStockLevel ?? 10,
           description: productData.description,
           imageUrl: productData.imageUrl,
-          supplierId: productData.supplierId, // <--- BỔ SUNG DÒNG NÀY ĐỂ LƯU VÀO DB
+          suppliers: {
+            create: supplierIds && supplierIds.length > 0
+              ? supplierIds.map((id: string) => ({
+                  supplierId: id,
+                }))
+              : [], 
+          },
         },
       });
 
@@ -44,81 +50,76 @@ export class ProductsService {
       const locations = await tx.location.findMany({
         where: { isActive: true },
       });
-
       
       return product;
     });
   }
 
-  // --- 2. LẤY DANH SÁCH (Hỗ trợ lọc & Search) ---
   async findAll(query: {
-    search?: string;
-    categoryId?: string;
-    locationId?: string;
-    minPrice?: string;
-    maxPrice?: string;
-    sortPrice?: 'asc' | 'desc';
-  }, userRole?: Role) {
+  search?: string;
+  categoryId?: string;
+  locationId?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  sortPrice?: 'asc' | 'desc';
+}, userRole?: Role) {
 
-    const { search, categoryId, locationId } = query;
+  const { search, categoryId, locationId, minPrice, maxPrice, sortPrice } = query;
+  const whereCondition: any = { isActive: true };
 
-    const whereCondition: any = { isActive: true };
-
-    if (search) {
-      whereCondition.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (categoryId) {
-      whereCondition.categoryId = categoryId;
-    }
-
-  
-  // PRICE FILTER
-const priceFilter: any = {};
-
-    if (query.minPrice) {
-      priceFilter.gte = Number(query.minPrice);
-    }
-
-    if (query.maxPrice) {
-      priceFilter.lte = Number(query.maxPrice);
-    }
-
-    if (Object.keys(priceFilter).length > 0) {
-      whereCondition.sellPrice = priceFilter;
-    }
-
-    const products = await this.prisma.product.findMany({
-      where: whereCondition,
-      include: {
-        category: true,
-        unit: true,
-        inventory: locationId ? { where: { locationId } } : false,
-        supplier: true, // <--- THÊM DÒNG NÀY ĐỂ KÉO THEO NHÀ CUNG CẤP
-      },
-      orderBy: query.sortPrice
-        ? { sellPrice: query.sortPrice }
-        : { createdAt: 'desc' },
-    });
-
-    // Format lại data để trả về Total Stock hoặc Stock theo kho
-    return products.map((p) => {
-      const stock = p.inventory?.[0]?.quantity || 0;
-
-      // Logic bảo mật: Nếu là Salesperson thì costPrice = 0
-      const safeCostPrice =
-        userRole === Role.SALESPERSON ? 0 : Number(p.costPrice);
-
-      return {
-        ...p,
-        costPrice: safeCostPrice, // Trả về giá vốn đã xử lý
-        currentStock: stock,
-      };
-    });
+  // 1. Filter Search & Category
+  if (search) {
+    whereCondition.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { sku: { contains: search, mode: 'insensitive' } },
+    ];
   }
+  if (categoryId) whereCondition.categoryId = categoryId;
+
+  // 2. Filter Price (Parse về số để Prisma hiểu)
+  if (minPrice || maxPrice) {
+    whereCondition.sellPrice = {};
+    if (minPrice) whereCondition.sellPrice.gte = parseFloat(minPrice);
+    if (maxPrice) whereCondition.sellPrice.lte = parseFloat(maxPrice);
+  }
+
+  // 3. Sắp xếp
+  const orderBy: any = sortPrice 
+    ? { sellPrice: sortPrice } 
+    : { createdAt: 'desc' };
+
+  // 4. Truy vấn
+  const products = await this.prisma.product.findMany({
+    where: whereCondition,
+    include: {
+      category: true,
+      unit: true,
+      inventory: locationId ? { where: { locationId } } : true,
+      suppliers: {
+        include: { supplier: true }
+      },
+    },
+    orderBy: orderBy,
+  });
+
+  // 5. Trả về data đã xử lý
+  return products.map((p) => {
+    // Tính tồn kho thông minh: theo kho lẻ hoặc tổng kho
+    const stock = locationId 
+      ? (p.inventory?.[0]?.quantity || 0)
+      : p.inventory?.reduce((sum, inv) => sum + (inv.quantity || 0), 0) || 0;
+
+    const safeCostPrice = userRole === 'SALESPERSON' ? 0 : Number(p.costPrice);
+
+    return {
+      ...p,
+      costPrice: safeCostPrice, 
+      sellPrice: Number(p.sellPrice),
+      currentStock: stock,
+      displaySuppliers: p.suppliers?.map(ps => ps.supplier) || [],
+    };
+  });
+}
 
   async findOne(id: string) {
     return await this.prisma.product.findUnique({
@@ -128,10 +129,20 @@ const priceFilter: any = {};
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+    const { supplierIds, ...productData } = updateProductDto as any;
     // Chỉ update thông tin cơ bản, không can thiệp vào quantity ở đây
     return await this.prisma.product.update({
       where: { id },
-      data: updateProductDto,
+      data: {
+        ...productData,
+        // Nếu có gửi mảng supplierIds lên -> Cập nhật quan hệ
+        ...(supplierIds !== undefined && {
+          suppliers: {
+            deleteMany: {}, // Xóa các liên kết NCC cũ
+            create: supplierIds.map((sid: string) => ({ supplierId: sid })), // Tạo mới
+          },
+        }),
+      },
     });
   }
 
