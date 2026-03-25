@@ -16,6 +16,8 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { ProductsModule } from './products/products.module';
 import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { CashTransactionsModule } from './cash-transactions/cash-transactions.module';
 @Global()
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.mo
     MasterDataModule,
     ProductsModule,
     SupplierPaymentsModule,
+    InvoicesModule,
+    CashTransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
