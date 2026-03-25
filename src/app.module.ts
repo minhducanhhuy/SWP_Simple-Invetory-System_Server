@@ -18,6 +18,7 @@ import { ProductsModule } from './products/products.module';
 import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { CashTransactionsModule } from './cash-transactions/cash-transactions.module';
+import { NotificationsModule } from './notification/notification.module';
 @Global()
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { CashTransactionsModule } from './cash-transactions/cash-transactions.mo
     SupplierPaymentsModule,
     InvoicesModule,
     CashTransactionsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
