@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
@@ -27,14 +28,16 @@ export class SuppliersController {
   }
 
   @Get()
-  findAll() {
-    return this.suppliersService.findAll();
+  findAll(@Query('locationId') locationId?: string) {
+    return this.suppliersService.findAll(locationId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string,
+          @Query('locationId') locationId?: string
+        ) {
     // ID là string (UUID), không dùng +id
-    return this.suppliersService.findOne(id);
+    return this.suppliersService.findOne(id, locationId);
   }
 
   @Patch(':id')

@@ -10,6 +10,27 @@ datasource db {
 // =========================================================
 // 1. QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN (Giữ nguyên)
 // =========================================================
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+}
 
 enum Role {
   OWNER // Chủ cửa hàng
@@ -38,11 +59,14 @@ model User {
   createdTickets  StockTicket[]
   createdPayments SupplierPayment[]
 
+  
   isActive        Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
+  Notification Notification[]
 
   @@map("users")
 }
@@ -71,6 +95,7 @@ model Location {
   destTickets   StockTicket[] @relation("DestLocation")
 
   isActive        Boolean           @default(true)
+  SupplierPayment SupplierPayment[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
 
@@ -201,6 +226,7 @@ model Customer {
   phone   String? @unique
   address String?
 
+
   tickets         StockTicket[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
@@ -301,6 +327,9 @@ model SupplierPayment {
   note       String?
   creatorId  String
   creator    User     @relation(fields: [creatorId], references: [id])
+  
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
 
   @@map("supplier_payments")
 }
