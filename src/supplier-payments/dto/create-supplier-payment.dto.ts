@@ -20,4 +20,8 @@ export class CreateSupplierPaymentDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  locationId: string;
 }

@@ -202,6 +202,29 @@ async function main() {
       address: 'Tân Bình, HCM',
     },
   });
+  const supPepsiHCM = await prisma.supplier.upsert({
+    where: { code: 'NCC-PEPSI-HCM' },
+    update: {},
+    create: {
+      code: 'NCC-PEPSI-HCM',
+      name: 'Suntory PepsiCo - CN Miền Nam',
+      email: 'sales.mn@pepsico.vn',
+      phone: '0988555666',
+      address: 'Quận 12, TP.HCM',
+    },
+  });
+
+  const supMasanHCM = await prisma.supplier.upsert({
+    where: { code: 'NCC-MASAN-HCM' },
+    update: {},
+    create: {
+      code: 'NCC-MASAN-HCM',
+      name: 'Masan Consumer - CN Miền Nam',
+      email: 'contact.mn@masan.vn',
+      phone: '0988777888',
+      address: 'Bình Thạnh, TP.HCM',
+    },
+  });
 
   // Khách hàng
   const custLe = await prisma.customer.create({
@@ -233,7 +256,12 @@ async function main() {
       name: 'Coca Cola 330ml',
       categoryId: catDoUong.id,
       unitId: unitLon.id,
-      supplierId: supCoca.id, // <--- THÊM DÒNG NÀY (Gắn với NCC Coca Cola)
+      // SỬA ĐOẠN NÀY
+      suppliers: {
+        connect: [
+          { id: supAcecook.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
+      },
       costPrice: 8000,
       sellPrice: 10000,
       minStockLevel: 20,
@@ -246,7 +274,12 @@ async function main() {
       name: 'Mì Hảo Hảo Tôm Chua Cay',
       categoryId: catDoAn.id,
       unitId: unitGoi.id,
-      supplierId: supAcecook.id, // <--- THÊM DÒNG NÀY (Gắn với NCC Acecook)
+      // SỬA ĐOẠN NÀY
+      suppliers: {
+        connect: [
+          { id: supCoca.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
+      },
       costPrice: 3500,
       sellPrice: 4500,
       minStockLevel: 50,

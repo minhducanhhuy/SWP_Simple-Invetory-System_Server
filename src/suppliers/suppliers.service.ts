@@ -80,7 +80,7 @@ constructor(
   }
 
   // 2. Lấy danh sách (Có thể mở rộng thêm search/filter sau này)
-  async findAll() {
+  async findAll(locationId?: string) {
     const suppliers = await this.prisma.supplier.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
@@ -88,6 +88,14 @@ constructor(
         _count: { select: { tickets: true } },
         // Cần include tickets (kèm details) và payments để tính toán
         tickets: {
+          // LỌC THEO SCHEMA MỚI CỦA BẠN: 
+          // Tìm các phiếu mà Kho hiện tại đóng vai trò là Nơi xuất HOẶC Nơi nhập
+          where: locationId ? {
+            OR: [
+              { destLocationId: locationId },   // Trường hợp Nhập hàng từ NCC về Kho
+              { sourceLocationId: locationId }  // Trường hợp Trả hàng từ Kho trả lại NCC
+            ]
+          } : undefined,
           include: { details: true },
         },
         payments: true,
@@ -99,13 +107,19 @@ constructor(
   }
 
   // 3. Lấy chi tiết (Sử dụng lại hàm calculateDebt)
-  async findOne(id: string) {
+  async findOne(id: string, locationId?: string) {
     const supplier = await this.prisma.supplier.findUnique({
       where: { id, isActive: true },
       include: {
         tickets: {
           where: {
             reason: ReasonCode.BUY,
+            OR: locationId
+              ? [
+                  { destLocationId: locationId },   // Nhập hàng từ NCC về Kho
+                  { sourceLocationId: locationId }  // Trả hàng từ Kho trả lại NCC
+                ]
+              : undefined,
           },
           include: { 
            // Thay vì chỉ details: true, ta mở rộng nó ra để include product

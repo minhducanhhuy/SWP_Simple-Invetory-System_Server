@@ -5,6 +5,7 @@ import {
   IsUrl,
   Min,
   IsUUID,
+  IsArray,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -41,6 +42,7 @@ export class CreateProductDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
-  supplierId?: string;
+  @IsArray({ message: 'Danh sách nhà cung cấp phải là một mảng' })
+  @IsString({ each: true, message: 'Mỗi ID nhà cung cấp phải là một chuỗi' })
+  supplierIds?: string[];
 }
