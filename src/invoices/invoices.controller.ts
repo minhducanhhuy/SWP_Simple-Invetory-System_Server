@@ -14,8 +14,14 @@ export class InvoicesController {
     return this.invoicesService.create(createInvoiceDto, req.user.id);
   }
 
+  @Get('dashboard')
+  getDashboardSummary(@Query('locationId') locationId: string) {
+    return this.invoicesService.getDashboardSummary(locationId);
+  }
+
   @Get()
   findAll(@Query('locationId') locationId: string) {
-    return this.invoicesService.findAllByLocation(locationId);
+    // SỬA DÒNG NÀY: Dùng findAll để Backend trả về cả chi tiết (món Coca, Pepsi...)
+    return this.invoicesService.findAll(locationId);
   }
 }
