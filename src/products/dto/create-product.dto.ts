@@ -39,4 +39,8 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  supplierId?: string;
 }

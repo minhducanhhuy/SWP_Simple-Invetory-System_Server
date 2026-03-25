@@ -62,7 +62,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id,
       username: user.username,
       role: user.role, // <--- ĐÂY LÀ ROLE TƯƠI MỚI NHẤT TỪ DB
-      // Các trường khác nếu cần
+      phone: user.phone,
+      address: user.address,
       fullName: user.fullName,
     };
   }
