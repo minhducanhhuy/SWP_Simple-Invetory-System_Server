@@ -59,9 +59,13 @@ model User {
   createdTickets  StockTicket[]
   createdPayments SupplierPayment[]
 
-  isActive     Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Invoice         Invoice[]
+  CashTransaction CashTransaction[]
   Notification Notification[]
 
   @@map("users")
@@ -92,6 +96,8 @@ model Location {
 
   isActive        Boolean           @default(true)
   SupplierPayment SupplierPayment[]
+  Invoice         Invoice[]
+  CashTransaction CashTransaction[]
 
   @@map("locations")
 }
@@ -161,11 +167,12 @@ model Product {
   inventory    InventoryItem[] // Tồn kho ở các chi nhánh
   transactions StockTransaction[] // Lịch sử nhập xuất
 
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  supplierId String? // <--- THÊM DÒNG NÀY
-  supplier   Supplier? @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  supplierId    String? // <--- THÊM DÒNG NÀY
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
+  InvoiceDetail InvoiceDetail[]
 
   @@map("products")
 }
@@ -219,7 +226,10 @@ model Customer {
   phone   String? @unique
   address String?
 
-  tickets StockTicket[]
+
+  tickets         StockTicket[]
+  Invoice         Invoice[]
+  CashTransaction CashTransaction[]
 
   @@map("customers")
 }
@@ -317,8 +327,113 @@ model SupplierPayment {
   note       String?
   creatorId  String
   creator    User     @relation(fields: [creatorId], references: [id])
+  
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
 
   @@map("supplier_payments")
+}
+
+// =========================================================
+// 6. QUẢN LÝ BÁN HÀNG (POS / HÓA ĐƠN)
+// =========================================================
+
+enum PaymentMethod {
+  CASH // Tiền mặt
+  BANK_TRANSFER // Chuyển khoản
+  CARD // Quẹt thẻ
+}
+
+model Invoice {
+  id   String @id @default(uuid())
+  code String @unique // Mã hóa đơn (VD: HD-1698765432)
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  locationId String // Bán tại chi nhánh nào
+  location   Location @relation(fields: [locationId], references: [id])
+
+  totalAmount Decimal @db.Decimal(15, 2) // Tổng tiền hàng ban đầu
+  discount    Decimal @default(0) @db.Decimal(15, 2) // Giảm giá (nếu có)
+  finalAmount Decimal @db.Decimal(15, 2) // Tiền khách phải trả (Sau giảm giá)
+  amountPaid  Decimal @db.Decimal(15, 2) // Tiền khách đưa
+
+  paymentMethod PaymentMethod @default(CASH)
+  note          String?
+
+  createdAt DateTime @default(now())
+
+  details         InvoiceDetail[]
+  CashTransaction CashTransaction[]
+
+  @@map("invoices")
+}
+
+model InvoiceDetail {
+  id String @id @default(uuid())
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Int
+  unitPrice Decimal @db.Decimal(15, 2) // Giá bán tại thời điểm xuất hóa đơn
+  subTotal  Decimal @db.Decimal(15, 2) // Thành tiền (quantity * unitPrice)
+
+  @@map("invoice_details")
+}
+
+// =========================================================
+// 7. SỔ QUỸ (QUẢN LÝ DÒNG TIỀN THU / CHI NỘI BỘ & BÁN HÀNG)
+// =========================================================
+
+enum CashFlowType {
+  IN // Thu vào (Bán hàng, thu nợ khách...)
+  OUT // Chi ra (Điện, nước, lương, mặt bằng...)
+}
+
+enum CashFlowCategory {
+  SALE // Thu tiền bán hàng (Tự động từ POS)
+  DEBT_COLLECT // Thu nợ khách hàng
+  EXPENSE // Chi phí vận hành (Điện, nước, lương...)
+  OTHER_IN // Thu khác
+  OTHER_OUT // Chi khác
+}
+
+model CashTransaction {
+  id   String @id @default(uuid())
+  code String @unique // Mã phiếu (VD: PT-123456)
+
+  type     CashFlowType
+  category CashFlowCategory
+
+  amount        Decimal       @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(CASH)
+
+  note String?
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Gắn với Khách hàng (Nếu có)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  // Gắn với Hóa đơn bán hàng để dễ dò lại
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cash_transactions")
 }
