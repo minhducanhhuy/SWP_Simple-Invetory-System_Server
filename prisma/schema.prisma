@@ -32,17 +32,16 @@ model User {
 
   resetToken          String?   @unique
   resetTokenExpiresAt DateTime?
-
   assignedLocations UserLocation[]
 
   createdTickets  StockTicket[]
   createdPayments SupplierPayment[]
-
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Notification Notification[]
 
   @@map("users")
 }
@@ -63,7 +62,6 @@ model Location {
   code    String  @unique
   name    String
   address String?
-
   assignedUsers UserLocation[]
   inventory     InventoryItem[]
 
@@ -100,6 +98,7 @@ model Category {
   description String?
   products    Product[]
 
+
   @@map("categories")
 }
 
@@ -130,6 +129,7 @@ model Product {
   unitId String
   unit   Unit   @relation(fields: [unitId], references: [id])
 
+
   // 4. Giá cả
   costPrice Decimal @default(0) @db.Decimal(15, 2) // Giá nhập
   sellPrice Decimal @default(0) @db.Decimal(15, 2) // Giá bán lẻ
@@ -157,6 +157,7 @@ model Product {
 // =========================================================
 
 model InventoryItem {
+
   id String @id @default(uuid())
 
   locationId String
@@ -167,7 +168,10 @@ model InventoryItem {
 
   quantity Int @default(0)
 
+
+
   updatedAt DateTime @updatedAt
+
 
   @@unique([locationId, productId])
   @@map("inventory_items")
@@ -186,6 +190,8 @@ model Supplier {
   address     String?
   initialDebt Decimal @default(0) @db.Decimal(15, 2)
   isActive    Boolean @default(true)
+
+  
 
   tickets  StockTicket[]
   payments SupplierPayment[]
@@ -247,6 +253,7 @@ model StockTicket {
   date   DateTime     @default(now())
 
   reason ReasonCode?
+  
 
   creatorId String
   creator   User   @relation(fields: [creatorId], references: [id])
@@ -264,6 +271,7 @@ model StockTicket {
   destLocation   Location? @relation("DestLocation", fields: [destLocationId], references: [id])
 
   details StockTransaction[]
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -288,10 +296,12 @@ model StockTransaction {
   actualQty    Int? // Số lượng đếm thực tế (hoặc thực nhận khi chuyển kho)
   note         String?
 
+
   @@map("stock_transactions")
 }
 
 model SupplierPayment {
+ 
   id         String   @id @default(uuid())
   code       String   @unique
   supplierId String
@@ -407,4 +417,26 @@ model CashTransaction {
   updatedAt DateTime @updatedAt
 
   @@map("cash_transactions")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
 }

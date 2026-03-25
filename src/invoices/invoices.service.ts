@@ -112,4 +112,106 @@ export class InvoicesService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  // Lấy danh sách hóa đơn theo chi nhánh (kèm chi tiết sản phẩm)
+  async findAll(locationId: string) {
+    return this.prisma.invoice.findMany({
+      where: locationId ? { locationId } : undefined,
+      orderBy: { createdAt: 'desc' }, // Sắp xếp hóa đơn mới nhất lên đầu
+      include: {
+        creator: { select: { fullName: true } }, // Tên thu ngân
+        customer: { select: { name: true } },    // Tên khách hàng
+        location: { select: { name: true } },    // Tên chi nhánh
+        details: {                               // Lấy chi tiết từng món hàng trong bill
+          include: {
+            product: { select: { name: true, sku: true } },
+          },
+        },
+      },
+    });
+  }
+
+  // API lấy dữ liệu Dashboard
+  async getDashboardSummary(locationId: string) {
+    // 1. Tính mốc thời gian
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    // 2. Doanh thu & Đơn hàng hôm nay
+    const todayInvoices = await this.prisma.invoice.findMany({
+      where: { locationId, createdAt: { gte: today } },
+    });
+    const todayRevenue = todayInvoices.reduce((sum, inv) => sum + Number(inv.amountPaid), 0);
+    const todayOrders = todayInvoices.length;
+
+    // 3. Biểu đồ doanh thu 7 ngày qua (Nhóm dữ liệu bằng JS)
+    const recentInvoices = await this.prisma.invoice.findMany({
+      where: { locationId, createdAt: { gte: sevenDaysAgo } },
+    });
+
+    const chartDataMap = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
+      chartDataMap[dateStr] = 0; // Khởi tạo mốc 0 đồng cho mỗi ngày
+    }
+    recentInvoices.forEach(inv => {
+      const dateStr = `${inv.createdAt.getDate()}/${inv.createdAt.getMonth() + 1}`;
+      if (chartDataMap[dateStr] !== undefined) {
+        chartDataMap[dateStr] += Number(inv.amountPaid);
+      }
+    });
+    const chartData = Object.keys(chartDataMap).map(date => ({
+      date,
+      revenue: chartDataMap[date]
+    }));
+
+    // 4. Cảnh báo sắp hết hàng (Dưới 10 sản phẩm)
+    const lowStockItems = await this.prisma.inventoryItem.findMany({
+      where: {
+        locationId,
+        quantity: { lte: 10 } // Tồn kho <= 10 thì báo động
+      },
+      include: { product: { select: { name: true, sku: true } } },
+      orderBy: { quantity: 'asc' },
+      take: 10,
+    });
+
+    // 5. Top 5 sản phẩm bán chạy (Từ các hóa đơn)
+    const recentDetails = await this.prisma.invoiceDetail.findMany({
+      where: { invoice: { locationId } },
+      include: { product: { select: { name: true } } },
+    });
+
+    const productSales = {};
+    recentDetails.forEach(detail => {
+      if (!productSales[detail.product.name]) {
+        productSales[detail.product.name] = 0;
+      }
+      productSales[detail.product.name] += detail.quantity;
+    });
+
+    const topProducts = Object.keys(productSales)
+      .map(name => ({ name, quantity: productSales[name] }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    return {
+      todayRevenue,
+      todayOrders,
+      chartData,
+      lowStockItems: lowStockItems.map(item => ({
+        id: item.id,
+        sku: item.product.sku,
+        name: item.product.name,
+        quantity: item.quantity
+      })),
+      topProducts,
+    };
+  }
+
 }
