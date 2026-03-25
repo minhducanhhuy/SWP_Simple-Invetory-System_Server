@@ -256,7 +256,12 @@ async function main() {
       name: 'Coca Cola 330ml',
       categoryId: catDoUong.id,
       unitId: unitLon.id,
-      supplierId: supCoca.id, // <--- THÊM DÒNG NÀY (Gắn với NCC Coca Cola)
+      // SỬA ĐOẠN NÀY
+      suppliers: {
+        connect: [
+          { id: supAcecook.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
+      },
       costPrice: 8000,
       sellPrice: 10000,
       minStockLevel: 20,
@@ -269,7 +274,12 @@ async function main() {
       name: 'Mì Hảo Hảo Tôm Chua Cay',
       categoryId: catDoAn.id,
       unitId: unitGoi.id,
-      supplierId: supAcecook.id, // <--- THÊM DÒNG NÀY (Gắn với NCC Acecook)
+      // SỬA ĐOẠN NÀY
+      suppliers: {
+        connect: [
+          { id: supCoca.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
+      },
       costPrice: 3500,
       sellPrice: 4500,
       minStockLevel: 50,

@@ -59,10 +59,9 @@ model User {
   createdTickets  StockTicket[]
   createdPayments SupplierPayment[]
 
-  
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
@@ -94,7 +93,8 @@ model Location {
   sourceTickets StockTicket[] @relation("SourceLocation")
   destTickets   StockTicket[] @relation("DestLocation")
 
-  isActive        Boolean           @default(true)
+  isActive Boolean @default(true)
+
   SupplierPayment SupplierPayment[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
@@ -121,7 +121,7 @@ model UserLocation {
 // Danh mục: Đồ uống, Đồ ăn nhanh, Hóa mỹ phẩm...
 model Category {
   id          String    @id @default(uuid())
-  name        String
+  name        String    @unique
   description String?
   products    Product[]
 
@@ -140,43 +140,38 @@ model Unit {
 // Sản phẩm 
 model Product {
   id String @id @default(uuid())
-
-  // 1. Định danh
-  sku         String  @unique // Mã vạch (Barcode) in trên bao bì
-  name        String // Tên SP: "Coca Cola 330ml"
+  sku         String  @unique 
+  name        String 
   imageUrl    String?
   description String?
-
-  // 2. Phân loại
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
-
-  // 3. Đơn vị tính (Quan trọng với Mini Mart)
   unitId String
   unit   Unit   @relation(fields: [unitId], references: [id])
 
-  // 4. Giá cả
-  costPrice Decimal @default(0) @db.Decimal(15, 2) // Giá nhập
-  sellPrice Decimal @default(0) @db.Decimal(15, 2) // Giá bán lẻ
+  costPrice Decimal @default(0) @db.Decimal(15, 2) 
+  sellPrice Decimal @default(0) @db.Decimal(15, 2) 
 
-  // 5. Cài đặt kho
-  minStockLevel Int  @default(10) // Cảnh báo khi dưới mức này
+  minStockLevel Int  @default(10) 
   maxStockLevel Int?
 
-  // 6. Quan hệ
-  inventory    InventoryItem[] // Tồn kho ở các chi nhánh
-  transactions StockTransaction[] // Lịch sử nhập xuất
-
-  isActive      Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  supplierId    String? // <--- THÊM DÒNG NÀY
-  supplier      Supplier?       @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
+  // --- GIỮ LẠI CÁC QUAN HỆ NÀY ---
+  inventory    InventoryItem[] 
+  transactions StockTransaction[] 
   InvoiceDetail InvoiceDetail[]
+
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // ==========================================
+  // [QUAN TRỌNG NHẤT]: XÓA HẾT CÁC DÒNG LIÊN QUAN ĐẾN SUPPLIER CŨ BỊ TRÙNG LẶP.
+  // VÀ CHỈ GIỮ LẠI ĐÚNG 1 DÒNG DƯỚI ĐÂY:
+  // ==========================================
+  suppliers   Supplier[] @relation("ProductToSupplier")
 
   @@map("products")
 }
-
 // =========================================================
 // 3. QUẢN LÝ TỒN KHO 
 // =========================================================
@@ -214,7 +209,9 @@ model Supplier {
 
   tickets  StockTicket[]
   payments SupplierPayment[]
-  products Product[] // <--- THÊM DÒNG NÀY
+
+  // --- CHỈ CẦN DÒNG NÀY LÀ ĐỦ ĐỂ TẠO QUAN HỆ NHIỀU - NHIỀU ---
+  products   Product[] @relation("ProductToSupplier")
 
   @@map("suppliers")
 }
@@ -226,8 +223,7 @@ model Customer {
   phone   String? @unique
   address String?
 
-
-  tickets         StockTicket[]
+  tickets StockTicket[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
 
