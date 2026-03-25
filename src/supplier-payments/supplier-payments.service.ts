@@ -16,6 +16,7 @@ export class SupplierPaymentsService {
         amount: dto.amount,
         note: dto.note,
         creatorId: creatorId,
+        locationId: dto.locationId,
       },
     });
   }
