@@ -202,6 +202,29 @@ async function main() {
       address: 'Tân Bình, HCM',
     },
   });
+  const supPepsiHCM = await prisma.supplier.upsert({
+    where: { code: 'NCC-PEPSI-HCM' },
+    update: {},
+    create: {
+      code: 'NCC-PEPSI-HCM',
+      name: 'Suntory PepsiCo - CN Miền Nam',
+      email: 'sales.mn@pepsico.vn',
+      phone: '0988555666',
+      address: 'Quận 12, TP.HCM',
+    },
+  });
+
+  const supMasanHCM = await prisma.supplier.upsert({
+    where: { code: 'NCC-MASAN-HCM' },
+    update: {},
+    create: {
+      code: 'NCC-MASAN-HCM',
+      name: 'Masan Consumer - CN Miền Nam',
+      email: 'contact.mn@masan.vn',
+      phone: '0988777888',
+      address: 'Bình Thạnh, TP.HCM',
+    },
+  });
 
   // Khách hàng
   const custLe = await prisma.customer.create({
