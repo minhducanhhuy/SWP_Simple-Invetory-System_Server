@@ -3,10 +3,11 @@ import {
   ConflictException,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto, UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 
@@ -118,28 +119,49 @@ export class UsersService {
   }
 
   // [MỚI] Hàm cho User tự sửa (Chỉ cho sửa Tên, SĐT, Pass)
+  // --- 1. CHỈ CẬP NHẬT THÔNG TIN ---
   async updateProfile(id: string, dto: UpdateUserDto) {
     const dataToUpdate: any = {};
 
-    // Chỉ lấy các trường cho phép
     if (dto.fullName) dataToUpdate.fullName = dto.fullName;
     if (dto.phone) dataToUpdate.phone = dto.phone;
+    if (dto.address) dataToUpdate.address = dto.address;
 
-    // Nếu có đổi pass thì hash
-    if (dto.password) {
-      dataToUpdate.password = await bcrypt.hash(dto.password, 10);
-    }
-
-    // Tuyệt đối KHÔNG update role, email, username ở đây
-    const user = await this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: dataToUpdate,
     });
 
-    const { password, ...result } = user;
+    const { password, ...result } = updatedUser;
     return result;
   }
 
+  // --- 2. CHỈ ĐỔI MẬT KHẨU ---
+  async changePassword(id: string, dto: ChangePasswordDto) {
+    const currentUser = await this.prisma.user.findUnique({ where: { id } });
+
+    if (!currentUser) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    // So sánh mật khẩu cũ
+    const isPasswordMatch = await bcrypt.compare(
+      dto.oldPassword,
+      currentUser.password,
+    );
+    if (!isPasswordMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác!');
+    }
+
+    // Hash mật khẩu mới và lưu
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Đổi mật khẩu thành công' };
+  }
   // [MỚI] Hàm cho Admin sửa Role
   async updateRole(id: string, role: Role) {
     // role kiểu Role enum

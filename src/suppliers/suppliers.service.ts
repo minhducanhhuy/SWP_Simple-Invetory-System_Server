@@ -8,11 +8,15 @@ import {
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { PrismaService } from 'prisma/prisma.service';
-import { ReasonCode} from '@prisma/client';
+import { NotificationType, ReasonCode} from '@prisma/client';
+import { NotificationsService } from 'src/notification/notification.service';
 
 @Injectable()
 export class SuppliersService {
-  constructor(private prisma: PrismaService) {}
+constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService, // Tiêm service vào đây
+  ) {}
 
   // --- HÀM TÍNH TOÁN CÔNG NỢ (Dùng chung) ---
   private calculateDebt(supplier: any) {
@@ -59,17 +63,24 @@ export class SuppliersService {
         `Mã NCC '${createSupplierDto.code}' đã tồn tại!`,
       );
     }
-
-    return await this.prisma.supplier.create({
+    const supplier = await this.prisma.supplier.create({
       data: {
         ...createSupplierDto,
         initialDebt: createSupplierDto.initialDebt || 0,
       },
     });
+    // thông báo cho quản lý khi có nhà cung cấp mới được thêm vào
+    await this.notify(
+      'Đối tác mới',
+      `Nhà cung cấp "${supplier.name}" vừa được thêm vào hệ thống.`,
+      NotificationType.SUCCESS,
+    );
+
+    return supplier;
   }
 
   // 2. Lấy danh sách (Có thể mở rộng thêm search/filter sau này)
-  async findAll() {
+  async findAll(locationId?: string) {
     const suppliers = await this.prisma.supplier.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
@@ -77,6 +88,14 @@ export class SuppliersService {
         _count: { select: { tickets: true } },
         // Cần include tickets (kèm details) và payments để tính toán
         tickets: {
+          // LỌC THEO SCHEMA MỚI CỦA BẠN: 
+          // Tìm các phiếu mà Kho hiện tại đóng vai trò là Nơi xuất HOẶC Nơi nhập
+          where: locationId ? {
+            OR: [
+              { destLocationId: locationId },   // Trường hợp Nhập hàng từ NCC về Kho
+              { sourceLocationId: locationId }  // Trường hợp Trả hàng từ Kho trả lại NCC
+            ]
+          } : undefined,
           include: { details: true },
         },
         payments: true,
@@ -88,13 +107,19 @@ export class SuppliersService {
   }
 
   // 3. Lấy chi tiết (Sử dụng lại hàm calculateDebt)
-  async findOne(id: string) {
+  async findOne(id: string, locationId?: string) {
     const supplier = await this.prisma.supplier.findUnique({
       where: { id, isActive: true },
       include: {
         tickets: {
           where: {
             reason: ReasonCode.BUY,
+            OR: locationId
+              ? [
+                  { destLocationId: locationId },   // Nhập hàng từ NCC về Kho
+                  { sourceLocationId: locationId }  // Trả hàng từ Kho trả lại NCC
+                ]
+              : undefined,
           },
           include: { 
            // Thay vì chỉ details: true, ta mở rộng nó ra để include product
@@ -137,11 +162,19 @@ export class SuppliersService {
           `Mã NCC '${updateSupplierDto.code}' đã tồn tại!`,
         );
     }
-
-    return await this.prisma.supplier.update({
+    const updated = await this.prisma.supplier.update({
       where: { id, isActive: true },
       data: updateSupplierDto,
     });
+
+    await this.notify(
+      'Cập nhật đối tác',
+      `Thông tin của nhà cung cấp "${updated.name}" vừa được thay đổi.`,
+      NotificationType.INFO,
+    );
+
+
+    return updated;
   }
 
   // 5. Xóa (Soft delete)
@@ -150,5 +183,27 @@ export class SuppliersService {
       where: { id, isActive: true },
       data: { isActive: false },
     });
+  }
+  private async notify(title: string, message: string, type: NotificationType) {
+    try {
+      // Tìm tất cả user có quyền OWNER hoặc MANAGER
+      const managers = await this.prisma.user.findMany({
+        where: { role: { in: ['OWNER', 'MANAGER'] } },
+        select: { id: true }
+      });
+
+      // Lặp qua từng người và gửi thông báo
+      for (const manager of managers) {
+        await this.notificationsService.create({
+          userId: manager.id,
+          title: title,
+          message: message,
+          type: type,
+        });
+      }
+    } catch (error) {
+      // Bắt lỗi nhẹ ở đây để nếu Socket/thông báo lỗi thì hệ thống chính vẫn không bị crash
+      console.error('Lỗi khi gửi thông báo:', error);
+    }
   }
 }
