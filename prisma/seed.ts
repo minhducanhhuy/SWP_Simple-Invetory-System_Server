@@ -233,8 +233,13 @@ async function main() {
       name: 'Coca Cola 330ml',
       categoryId: catDoUong.id,
       unitId: unitLon.id,
-      costPrice: 8000, // Nhập 8k
-      sellPrice: 10000, // Bán 10k
+      suppliers: {
+        connect: [
+          { id: supCoca.id } 
+        ]
+      },
+      costPrice: 8000,
+      sellPrice: 10000,
       minStockLevel: 20,
     },
   });
@@ -245,6 +250,11 @@ async function main() {
       name: 'Mì Hảo Hảo Tôm Chua Cay',
       categoryId: catDoAn.id,
       unitId: unitGoi.id,
+      suppliers: {
+        connect: [
+          { id: supAcecook.id } 
+        ]
+      },
       costPrice: 3500,
       sellPrice: 4500,
       minStockLevel: 50,
