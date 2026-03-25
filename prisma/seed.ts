@@ -183,13 +183,14 @@ async function main() {
   console.log('🔄 Đang tạo Nhà cung cấp & Khách hàng...');
 
   // Nhà cung cấp
-  const supCoca = await prisma.supplier.create({
+const supCoca = await prisma.supplier.create({
     data: {
       code: 'NCC-COCA',
       name: 'Coca Cola Việt Nam',
       email: 'contact@coca.vn',
       phone: '0909111222',
       address: 'Thủ Đức, HCM',
+      locationId: khoHN.id, // <--- THÊM DÒNG NÀY
     },
   });
 
@@ -200,10 +201,15 @@ async function main() {
       email: 'sales@acecook.vn',
       phone: '0909333444',
       address: 'Tân Bình, HCM',
+      locationId: khoHN.id, // <--- THÊM DÒNG NÀY
     },
   });
+
+  // Nhà cung cấp gán cho Kho HCM
   const supPepsiHCM = await prisma.supplier.upsert({
-    where: { code: 'NCC-PEPSI-HCM' },
+    where: { 
+      code_locationId: { code: 'NCC-PEPSI-HCM', locationId: khoHCM.id } 
+    }, // Lưu ý: upsert với @@unique mới cần dùng code_locationId
     update: {},
     create: {
       code: 'NCC-PEPSI-HCM',
@@ -211,11 +217,14 @@ async function main() {
       email: 'sales.mn@pepsico.vn',
       phone: '0988555666',
       address: 'Quận 12, TP.HCM',
+      locationId: khoHCM.id, // <--- THÊM DÒNG NÀY
     },
   });
 
   const supMasanHCM = await prisma.supplier.upsert({
-    where: { code: 'NCC-MASAN-HCM' },
+    where: { 
+      code_locationId: { code: 'NCC-MASAN-HCM', locationId: khoHCM.id } 
+    },
     update: {},
     create: {
       code: 'NCC-MASAN-HCM',
@@ -223,6 +232,7 @@ async function main() {
       email: 'contact.mn@masan.vn',
       phone: '0988777888',
       address: 'Bình Thạnh, TP.HCM',
+      locationId: khoHCM.id, // <--- THÊM DÒNG NÀY
     },
   });
 

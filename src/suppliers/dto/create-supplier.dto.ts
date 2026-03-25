@@ -35,4 +35,8 @@ export class CreateSupplierDto {
   @Min(0)
   // bỏ qua trường hợp người dùng không nhập gì hoặc nhập chuỗi rỗng, mặc định là 0
   initialDebt?: number; // Nợ đầu kỳ (nếu có)
+
+  @IsString()
+  @IsNotEmpty()
+  locationId: string;
 }
