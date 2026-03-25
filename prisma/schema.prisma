@@ -140,46 +140,38 @@ model Unit {
 // Sản phẩm 
 model Product {
   id String @id @default(uuid())
-
-  // 1. Định danh
-  sku         String  @unique // Mã vạch (Barcode) in trên bao bì
-  name        String // Tên SP: "Coca Cola 330ml"
+  sku         String  @unique 
+  name        String 
   imageUrl    String?
   description String?
-
-  // 2. Phân loại
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
-
-  // 3. Đơn vị tính (Quan trọng với Mini Mart)
   unitId String
   unit   Unit   @relation(fields: [unitId], references: [id])
 
-  // 4. Giá cả
-  costPrice Decimal @default(0) @db.Decimal(15, 2) // Giá nhập
-  sellPrice Decimal @default(0) @db.Decimal(15, 2) // Giá bán lẻ
+  costPrice Decimal @default(0) @db.Decimal(15, 2) 
+  sellPrice Decimal @default(0) @db.Decimal(15, 2) 
 
-  // 5. Cài đặt kho
-  minStockLevel Int  @default(10) // Cảnh báo khi dưới mức này
+  minStockLevel Int  @default(10) 
   maxStockLevel Int?
 
-  // 6. Quan hệ
-  suppliers    ProductSupplier[]
-  inventory    InventoryItem[] // Tồn kho ở các chi nhánh
-  transactions StockTransaction[] // Lịch sử nhập xuất
+  // --- GIỮ LẠI CÁC QUAN HỆ NÀY ---
+  inventory    InventoryItem[] 
+  transactions StockTransaction[] 
+  InvoiceDetail InvoiceDetail[]
 
   isActive   Boolean   @default(true)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  Supplier   Supplier? @relation(fields: [supplierId], references: [id])
-  supplierId String?
 
-  supplier      Supplier?       @relation(fields: [supplierId], references: [id]) // <--- THÊM DÒNG NÀY
-  InvoiceDetail InvoiceDetail[]
+  // ==========================================
+  // [QUAN TRỌNG NHẤT]: XÓA HẾT CÁC DÒNG LIÊN QUAN ĐẾN SUPPLIER CŨ BỊ TRÙNG LẶP.
+  // VÀ CHỈ GIỮ LẠI ĐÚNG 1 DÒNG DƯỚI ĐÂY:
+  // ==========================================
+  suppliers   Supplier[] @relation("ProductToSupplier")
 
   @@map("products")
 }
-
 // =========================================================
 // 3. QUẢN LÝ TỒN KHO 
 // =========================================================
@@ -218,8 +210,8 @@ model Supplier {
   tickets  StockTicket[]
   payments SupplierPayment[]
 
-  products        Product[] // Quan hệ ngược lại
-  ProductSupplier ProductSupplier[]
+  // --- CHỈ CẦN DÒNG NÀY LÀ ĐỦ ĐỂ TẠO QUAN HỆ NHIỀU - NHIỀU ---
+  products   Product[] @relation("ProductToSupplier")
 
   @@map("suppliers")
 }
@@ -338,19 +330,6 @@ model SupplierPayment {
   @@map("supplier_payments")
 }
 
-model ProductSupplier {
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-  // Bạn có thể thêm trường này để biết NCC nào là NCC chính (Tùy chọn)
-  isPrimary Boolean @default(false)
-
-  @@id([productId, supplierId]) // Khóa chính tổ hợp: Một SP không thể trùng 1 NCC 2 lần
-  @@map("product_suppliers")
-}
 // =========================================================
 // 6. QUẢN LÝ BÁN HÀNG (POS / HÓA ĐƠN)
 // =========================================================

@@ -256,10 +256,11 @@ async function main() {
       name: 'Coca Cola 330ml',
       categoryId: catDoUong.id,
       unitId: unitLon.id,
+      // SỬA ĐOẠN NÀY
       suppliers: {
-        create: [
-          { supplierId: supAcecook.id } 
-        ]
+        connect: [
+          { id: supAcecook.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
       },
       costPrice: 8000,
       sellPrice: 10000,
@@ -275,9 +276,9 @@ async function main() {
       unitId: unitGoi.id,
       // SỬA ĐOẠN NÀY
       suppliers: {
-        create: [
-          { supplierId: supCoca.id } 
-        ]
+        connect: [
+          { id: supCoca.id }, // <--- Đổi 'supplierId' thành 'id'
+        ],
       },
       costPrice: 3500,
       sellPrice: 4500,
