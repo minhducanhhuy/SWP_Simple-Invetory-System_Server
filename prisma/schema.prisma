@@ -217,7 +217,6 @@ model Supplier {
 
   tickets   StockTicket[]
   payments  SupplierPayment[]
-  products  Product[] // <--- THÊM DÒNG NÀY
   locations UserLocation[]
   products   Product[] @relation("ProductToSupplier")
 
