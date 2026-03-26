@@ -53,31 +53,23 @@ constructor(
   }
 
   // 1. Tạo mới
-async create(createSupplierDto: CreateSupplierDto) {
-    // 1. ĐỔI findUnique THÀNH findFirst VÀ LỌC THEO CẢ 2 TRƯỜNG
-    const exist = await this.prisma.supplier.findFirst({
-      where: { 
-        code: createSupplierDto.code,
-        locationId: createSupplierDto.locationId // Chỉ check trùng mã trong kho hiện tại
-      },
+  async create(createSupplierDto: CreateSupplierDto) {
+    // Check trùng mã code
+    const exist = await this.prisma.supplier.findUnique({
+      where: { code: createSupplierDto.code },
     });
-
     if (exist) {
       throw new BadRequestException(
-        `Mã NCC '${createSupplierDto.code}' đã tồn tại trong chi nhánh này!`,
+        `Mã NCC '${createSupplierDto.code}' đã tồn tại!`,
       );
     }
-
-    // 2. TẠO MỚI (Prisma sẽ tự bốc locationId từ dto nhét vào)
     const supplier = await this.prisma.supplier.create({
       data: {
         ...createSupplierDto,
         initialDebt: createSupplierDto.initialDebt || 0,
       },
     });
-
-    // 3. THÔNG BÁO TỚI QUẢN LÝ
-    // 💡 Pro-tip: Bạn có thể nâng cấp hàm notify() để nó chỉ gửi cho quản lý của kho này thôi
+    // thông báo cho quản lý khi có nhà cung cấp mới được thêm vào
     await this.notify(
       'Đối tác mới',
       `Nhà cung cấp "${supplier.name}" vừa được thêm vào hệ thống.`,
@@ -90,7 +82,7 @@ async create(createSupplierDto: CreateSupplierDto) {
   // 2. Lấy danh sách (Có thể mở rộng thêm search/filter sau này)
   async findAll(locationId?: string) {
     const suppliers = await this.prisma.supplier.findMany({
-      where: { isActive: true,locationId: locationId }, // Lọc theo kho nếu có truyền vào
+      where: { isActive: true },
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { tickets: true } },
