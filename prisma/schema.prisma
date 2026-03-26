@@ -64,7 +64,7 @@ model User {
   
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
-  Notification Notification[]
+  Notification    Notification[]
 
   @@map("users")
 }
@@ -96,17 +96,20 @@ model Location {
   SupplierPayment SupplierPayment[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
+  Supplier        Supplier[]
 
   @@map("locations")
 }
 
 model UserLocation {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
   locationId String
-  location   Location @relation(fields: [locationId], references: [id])
-  assignedAt DateTime @default(now())
+  location   Location  @relation(fields: [locationId], references: [id])
+  assignedAt DateTime  @default(now())
+  Supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId String?
 
   @@unique([userId, locationId])
   @@map("user_locations")
@@ -201,24 +204,25 @@ model InventoryItem {
 // =========================================================
 
 model Supplier {
-  id          String  @id @default(uuid())
-  code        String  @unique
+  id          String   @id @default(uuid())
+  code        String   @unique
   name        String
   phone       String?
   email       String?
   address     String?
-  initialDebt Decimal @default(0) @db.Decimal(15, 2)
-  isActive    Boolean @default(true)
+  initialDebt Decimal  @default(0) @db.Decimal(15, 2)
+  isActive    Boolean  @default(true)
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
 
-  
-
-  tickets  StockTicket[]
-  payments SupplierPayment[]
-
-  // --- CHỈ CẦN DÒNG NÀY LÀ ĐỦ ĐỂ TẠO QUAN HỆ NHIỀU - NHIỀU ---
+  tickets   StockTicket[]
+  payments  SupplierPayment[]
+  products  Product[] // <--- THÊM DÒNG NÀY
+  locations UserLocation[]
   products   Product[] @relation("ProductToSupplier")
 
-  @@map("suppliers")
+@@unique([code, locationId], name: "code_locationId") // Đặt tên rõ ràng ở đây
+@@map("suppliers")
 }
 
 model Customer {
@@ -228,7 +232,7 @@ model Customer {
   phone   String? @unique
   address String?
 
-  tickets StockTicket[]
+  tickets         StockTicket[]
   Invoice         Invoice[]
   CashTransaction CashTransaction[]
 
@@ -332,7 +336,7 @@ model SupplierPayment {
   note       String?
   creatorId  String
   creator    User     @relation(fields: [creatorId], references: [id])
-  
+
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
 
