@@ -49,17 +49,42 @@ export class StockTicketsService {
             : (ticketData.status ?? 'COMPLETED' as any),
 
           details: {
-            create: details.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-              systemQty: item.systemQty,
-              actualQty: item.actualQty,
-              note: item.note,
-            })),
+            create: details.map((item) => {
+              // 1. KHAI BÁO RÕ RÀNG KIỂU DỮ LIỆU LÀ Date HOẶC null
+              let parsedExpiryDate: Date | null = null; 
+
+              if (dto.type === 'IMPORT' && item.expiryDate) {
+                const parts = item.expiryDate.split('/');
+                if (parts.length === 3) {
+                  const [day, month, year] = parts;
+                  parsedExpiryDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+
+                  // 2. CHUYỂN LOGIC CHECK VÀO TRONG NÀY ĐỂ TRÁNH LỖI "POSSIBLY NULL"
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0); 
+
+                  if (parsedExpiryDate <= today) {
+                    throw new BadRequestException('Hạn sử dụng của sản phẩm nhập vào phải sau ngày hôm nay!');
+                  }
+                } else {
+                  throw new BadRequestException('Hạn sử dụng phải đúng định dạng dd/mm/yyyy');
+                }
+              }
+
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                systemQty: item.systemQty,
+                actualQty: item.actualQty,
+                note: item.note,
+                expiryDate: parsedExpiryDate, 
+              };
+            }),
           },
         },
       });
+
 
       // 2. XỬ LÝ KHO (Dựa theo trạng thái phiếu)
 
