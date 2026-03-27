@@ -98,6 +98,8 @@ model Location {
   CashTransaction CashTransaction[]
   Supplier        Supplier[]
 
+  productBatches  ProductBatch[]
+
   @@map("locations")
 }
 
@@ -171,6 +173,8 @@ model Product {
   // VÀ CHỈ GIỮ LẠI ĐÚNG 1 DÒNG DƯỚI ĐÂY:
   // ==========================================
   suppliers   Supplier[] @relation("ProductToSupplier")
+
+  productBatches ProductBatch[]
 
   @@map("products")
 }
@@ -320,6 +324,8 @@ model StockTransaction {
   actualQty    Int? // Số lượng đếm thực tế (hoặc thực nhận khi chuyển kho)
   note         String?
 
+  expiryDate   DateTime?
+
 
   @@map("stock_transactions")
 }
@@ -446,3 +452,23 @@ model CashTransaction {
   @@map("cash_transactions")
 }
 
+// =========================================================
+// 8. QUẢN LÝ HẠN SỬ DỤNG THEO LÔ (MODULE MỚI)
+// =========================================================
+
+model ProductBatch {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+  
+  batchCode   String   // Mã lô (ví dụ: LO-20240327)
+  quantity    Int      // Số lượng thực tế còn trong lô này
+  expiryDate  DateTime // Hạn sử dụng (Lưu dạng DateTime)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("product_batches")
+}

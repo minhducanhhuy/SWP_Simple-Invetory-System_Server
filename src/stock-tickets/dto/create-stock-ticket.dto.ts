@@ -9,6 +9,7 @@ import {
   IsNumber,
   Min,
   ValidateIf,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TicketType, TicketStatus, ReasonCode } from '@prisma/client';
@@ -43,6 +44,13 @@ class TicketDetailDto {
   @IsOptional()
   @IsDateString()
   date?: string; // <--- Thêm dòng này vào DTO
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/\d{4}$/, {
+    message: 'Hạn sử dụng phải đúng định dạng dd/mm/yyyy',
+  })
+  expiryDate?: string;
 }
 
 export class CreateStockTicketDto {
