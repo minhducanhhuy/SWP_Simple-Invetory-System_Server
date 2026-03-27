@@ -20,15 +20,25 @@ export class InvoicesService {
     const finalAmount = totalAmount - (dto.discount || 0);
 
     return await this.prisma.$transaction(async (tx) => {
-      // 2. CHECK TỒN KHO TRƯỚC KHI BÁN
+
+      // ========================================================
+      // 2. KIỂM TRA & TRỪ TỒN KHO CÙNG LÚC (Bịt lỗ hổng bán lố)
+      // ========================================================
       for (const item of dto.details) {
-        const currentInv = await tx.inventoryItem.findUnique({
-          where: { locationId_productId: { locationId: dto.locationId, productId: item.productId } },
+        // Dùng updateMany để gài điều kiện: quantity trong DB phải >= quantity khách mua
+        const updatedInv = await tx.inventoryItem.updateMany({
+          where: {
+            locationId: dto.locationId,
+            productId: item.productId,
+            quantity: { gte: item.quantity } // Chặn đứng tại đây nếu kho không đủ
+          },
+          data: { quantity: { decrement: item.quantity } },
         });
 
-        if (!currentInv || currentInv.quantity < item.quantity) {
+        // Nếu count === 0 nghĩa là lệnh update bị từ chối (do điều kiện gte ở trên bị sai)
+        if (updatedInv.count === 0) {
           const prod = await tx.product.findUnique({ where: { id: item.productId } });
-          throw new BadRequestException(`Sản phẩm "${prod?.name || item.productId}" không đủ tồn kho để bán! (Còn lại: ${currentInv?.quantity || 0})`);
+          throw new BadRequestException(`Sản phẩm "${prod?.name || item.productId}" không đủ tồn kho hoặc đã hết hàng!`);
         }
       }
 
@@ -76,33 +86,27 @@ export class InvoicesService {
         },
       });
 
-      // 5. TRỪ TỒN KHO THỰC TẾ
-      for (const item of dto.details) {
-        await tx.inventoryItem.update({
-          where: { locationId_productId: { locationId: dto.locationId, productId: item.productId } },
-          data: { quantity: { decrement: item.quantity } },
-        });
-      }
+      // (ĐÃ XÓA BƯỚC 5 CŨ Ở ĐÂY VÌ ĐÃ TRỪ KHO Ở BƯỚC 2 RỒI)
 
+      // 6. TẠO PHIẾU THU SỔ QUỸ
       await tx.cashTransaction.create({
         data: {
           code: `PT-BAN-${Date.now()}`,
-          type: CashFlowType.IN, // Chiều dòng tiền: THU VÀO
-          category: CashFlowCategory.SALE, // Loại: BÁN HÀNG
-          amount: finalAmount, // Chỉ ghi nhận số tiền thực tế cửa hàng đút túi (sau khi đã thối lại tiền thừa)
+          type: CashFlowType.IN,
+          category: CashFlowCategory.SALE,
+          amount: finalAmount,
           paymentMethod: dto.paymentMethod,
           note: `Thu tiền bán hàng - HĐ: ${invoice.code}`,
           locationId: dto.locationId,
           creatorId,
           customerId: dto.customerId,
-          invoiceId: invoice.id, // Móc nối trực tiếp vào Hóa đơn để sau này click vào là xem được chi tiết
+          invoiceId: invoice.id,
         },
       });
 
       return invoice;
     });
   }
-
 
   // Lấy danh sách hóa đơn theo chi nhánh (Dùng cho Giao ca)
   async findAllByLocation(locationId: string) {
