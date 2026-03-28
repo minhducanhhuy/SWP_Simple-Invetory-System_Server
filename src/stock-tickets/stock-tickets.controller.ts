@@ -41,12 +41,15 @@ export class StockTicketsController {
     }
     // C. LUỒNG NHẬP / XUẤT BÌNH THƯỜNG
     else {
-      createStockTicketDto.status = 'COMPLETED' as TicketStatus;
+      // Nếu là Manager tạo phiếu Nhập Kho (IMPORT), đưa vào trạng thái chờ Sếp duyệt
+      if (user.role === Role.MANAGER && createStockTicketDto.type === 'IMPORT') {
+        createStockTicketDto.status = 'PENDING_APPROVAL' as TicketStatus;
+      } else {
+        createStockTicketDto.status = 'COMPLETED' as TicketStatus;
+      }
     }
-
     return this.stockTicketsService.create(createStockTicketDto, user.id);
   }
-
   @Get()
   findAll() {
     return this.stockTicketsService.findAll();
