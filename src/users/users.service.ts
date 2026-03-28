@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,13 +25,11 @@ export class UsersService {
 
     // 1. Kiểm tra nếu không tìm thấy user
     if (!foundUser) {
-      throw new NotFoundException('Người dùng không tồn tại');
+      throw new UnauthorizedException('Người dùng không tồn tại'); // Đổi thành Unauthorized
     }
-
     // 2. Kiểm tra trạng thái hoạt động
     if (!foundUser.isActive) {
-      // Quăng lỗi Forbidden với thông báo tiếng Việt
-      throw new ForbiddenException(
+      throw new UnauthorizedException(
         'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
       );
     }
