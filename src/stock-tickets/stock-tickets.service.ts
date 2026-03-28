@@ -206,9 +206,38 @@ export class StockTicketsService {
             });
           }
         }
-      }
 
-      // Đổi trạng thái: Chuyển kho thì thành IN_TRANSIT (đi đường), Kiểm kê thì thành COMPLETED (chốt sổ)
+
+
+        // =======================================================
+        // --- LOGIC 3 (THÊM MỚI): DUYỆT PHIẾU NHẬP/XUẤT BÌNH THƯỜNG ---
+        // =======================================================
+        else if (ticket.type === 'IMPORT' || ticket.type === 'EXPORT') {
+          // Nếu là DUYỆT PHIẾU NHẬP -> Cộng tồn kho Đích
+          if (ticket.type === 'IMPORT' && ticket.destLocationId) {
+            await tx.inventoryItem.upsert({
+              where: { locationId_productId: { locationId: ticket.destLocationId, productId: item.productId } },
+              update: { quantity: { increment: item.quantity } },
+              create: { locationId: ticket.destLocationId, productId: item.productId, quantity: item.quantity },
+            });
+          }
+          // Nếu là DUYỆT PHIẾU XUẤT -> Trừ tồn kho Nguồn
+          else if (ticket.type === 'EXPORT' && ticket.sourceLocationId) {
+            const currentInv = await tx.inventoryItem.findUnique({
+              where: { locationId_productId: { locationId: ticket.sourceLocationId, productId: item.productId } },
+            });
+            if (!currentInv || currentInv.quantity < item.quantity) {
+              throw new BadRequestException(`Sản phẩm (ID: ${item.productId}) không đủ tồn kho để xuất!`);
+            }
+            await tx.inventoryItem.update({
+              where: { locationId_productId: { locationId: ticket.sourceLocationId, productId: item.productId } },
+              data: { quantity: { decrement: item.quantity } },
+            });
+          }
+        }
+      } // Kết thúc vòng lặp for
+
+      // Đổi trạng thái: Chuyển kho thì thành IN_TRANSIT, các loại phiếu khác thì thành COMPLETED (chốt sổ)
       const newStatus = ticket.reason === 'TRANSFER' ? TicketStatus.IN_TRANSIT : TicketStatus.COMPLETED;
 
       return tx.stockTicket.update({
