@@ -50,18 +50,17 @@ export class StockTicketsService {
 
           details: {
             create: details.map((item) => {
-              // 1. KHAI BÁO RÕ RÀNG KIỂU DỮ LIỆU LÀ Date HOẶC null
-              let parsedExpiryDate: Date | null = null; 
+              let parsedExpiryDate: Date | null = null;
 
-              if (dto.type === 'IMPORT' && item.expiryDate) {
+              // Nếu Frontend có gửi HSD lên thì tiến hành cắt chuỗi và chuyển thành Date
+              if (item.expiryDate) {
                 const parts = item.expiryDate.split('/');
                 if (parts.length === 3) {
                   const [day, month, year] = parts;
                   parsedExpiryDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
 
-                  // 2. CHUYỂN LOGIC CHECK VÀO TRONG NÀY ĐỂ TRÁNH LỖI "POSSIBLY NULL"
                   const today = new Date();
-                  today.setHours(0, 0, 0, 0); 
+                  today.setHours(0, 0, 0, 0);
 
                   if (parsedExpiryDate <= today) {
                     throw new BadRequestException('Hạn sử dụng của sản phẩm nhập vào phải sau ngày hôm nay!');
@@ -69,6 +68,10 @@ export class StockTicketsService {
                 } else {
                   throw new BadRequestException('Hạn sử dụng phải đúng định dạng dd/mm/yyyy');
                 }
+              }
+              // NẾU LÀ PHIẾU MUA HÀNG (BUY) MÀ Frontend KHÔNG GỬI HSD LÊN THÌ CHẶN LẠI NGAY
+              else if (dto.type === 'IMPORT' && dto.reason === 'BUY') {
+                throw new BadRequestException('Bắt buộc phải nhập Hạn sử dụng cho hàng nhập mua từ Nhà cung cấp!');
               }
 
               return {
@@ -78,7 +81,7 @@ export class StockTicketsService {
                 systemQty: item.systemQty,
                 actualQty: item.actualQty,
                 note: item.note,
-                expiryDate: parsedExpiryDate, 
+                expiryDate: parsedExpiryDate,
               };
             }),
           },
