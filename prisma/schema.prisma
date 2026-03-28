@@ -418,6 +418,7 @@ enum CashFlowCategory {
   EXPENSE // Chi phí vận hành (Điện, nước, lương...)
   OTHER_IN // Thu khác
   OTHER_OUT // Chi khác
+  IMPORT_PAY
 }
 
 model CashTransaction {
