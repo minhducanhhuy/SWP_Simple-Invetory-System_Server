@@ -80,8 +80,6 @@ export class ProductsService {
 
     const whereCondition: any = { isActive: true };
 
-    console.log(query);
-
     // --- Search & Filters (Giữ nguyên) ---
     if (search) {
       whereCondition.OR = [
