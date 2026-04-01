@@ -1,98 +1,130 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## Hướng dẫn cài đặt
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Để cài đặt và chạy dự án backend này trên môi trường local của bạn, hãy làm theo các bước sau:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+### 1. Yêu cầu hệ thống
 
-## Description
+Đảm bảo bạn đã cài đặt các phần mềm sau:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Node.js** (phiên bản 18 trở lên)
+- **npm** (hoặc yarn)
+- **PostgreSQL** database server
+- **Git**
 
-## Project setup
+### 2. Thiết lập môi trường local
 
-```bash
-$ npm install
-```
+1.  **Clone repository:**
 
-## Compile and run the project
+    ```bash
+    git clone <URL_CỦA_REPOSITORY_BACKEND>
+    cd Simple_Inventory_Management/server
+    ```
 
-```bash
-# development
-$ npm run start
+    _(Thay `<URL_CỦA_REPOSITORY_BACKEND>` bằng URL thực tế của repository backend của bạn.)_
 
-# watch mode
-$ npm run start:dev
+2.  **Cài đặt các dependencies:**
+    Sử dụng npm để cài đặt tất cả các gói cần thiết:
 
-# production mode
-$ npm run start:prod
-```
+    ```bash
+    npm install
+    ```
 
-## Run tests
+3.  **Cấu hình biến môi trường (`.env`)**:
+    - Tạo một file có tên `.env` ở thư mục gốc của dự án (`Simple_Inventory_Management/server`).
+    - Thêm các biến môi trường sau vào file `.env` của bạn và điều chỉnh giá trị cho phù hợp với môi trường local của bạn:
 
-```bash
-# unit tests
-$ npm run test
+      ```dotenv
+      PORT=3035
+      DATABASE_URL="postgresql://user:password@localhost:5432/simple_inventory_db?schema=public"
+      JWT_SECRET=your_jwt_secret_key # Thay đổi bằng một chuỗi mạnh
+      JWT_EXPIRATION_TIME=3600s
+      REFRESH_TOKEN_SECRET=your_refresh_token_secret_key # Thay đổi bằng một chuỗi mạnh
+      REFRESH_TOKEN_EXPIRATION_TIME=7d
+      EMAIL_HOST=smtp.example.com
+      EMAIL_PORT=587
+      EMAIL_USER=your_email@example.com
+      EMAIL_PASS=your_email_password
+      FRONTEND_URL=http://localhost:3000 # Hoặc domain frontend của bạn
+      ```
 
-# e2e tests
-$ npm run test:e2e
+    - **Lưu ý:**
+      - `DATABASE_URL`: Đảm bảo rằng bạn đã tạo một cơ sở dữ liệu PostgreSQL và cập nhật chuỗi kết nối phù hợp.
+      - `JWT_SECRET` và `REFRESH_TOKEN_SECRET`: Sử dụng các chuỗi bí mật mạnh và duy nhất.
+      - Cấu hình email nếu bạn muốn sử dụng tính năng gửi email.
 
-# test coverage
-$ npm run test:cov
-```
+4.  **Chạy Prisma Migrations và Seed dữ liệu:**
+    Sau khi cấu hình `DATABASE_URL`, bạn cần áp dụng các migration và seed dữ liệu ban đầu cho cơ sở dữ liệu của mình:
 
-## Deployment
+    ```bash
+    npx prisma migrate dev --name init
+    npx prisma db seed
+    ```
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+5.  **Chạy ứng dụng:**
+    Khởi động máy chủ phát triển cục bộ:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+    ```bash
+    npm run start:dev
+    ```
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+    Ứng dụng sẽ chạy tại `http://localhost:3035` (hoặc cổng bạn đã cấu hình trong `.env`).
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+6.  **Build cho Production:**
+    Để build ứng dụng sẵn sàng cho môi trường production:
+    ```bash
+    npm run build
+    npm run start:prod
+    ```
+    Các file đã được build sẽ nằm trong thư mục `dist/`.
 
-## Resources
+## API Endpoints chính
 
-Check out a few resources that may come in handy when working with NestJS:
+Ứng dụng backend này cung cấp một bộ API RESTful toàn diện để quản lý kho hàng. Tất cả các endpoint đều có tiền tố `/api`. Dưới đây là một số endpoint chính:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- **Xác thực & Người dùng (`/api/auth`, `/api/users`)**
+  - `POST /api/auth/register`: Đăng ký người dùng mới (chỉ ADMIN/OWNER).
+  - `POST /api/auth/login`: Đăng nhập và nhận JWT.
+  - `POST /api/auth/refresh`: Làm mới JWT bằng refresh token.
+  - `POST /api/auth/logout`: Đăng xuất.
+  - `GET /api/users/profile`: Lấy thông tin profile của người dùng hiện tại.
+  - `PATCH /api/users/profile`: Cập nhật thông tin profile của người dùng hiện tại.
+  - `GET /api/users`: Lấy danh sách tất cả người dùng (yêu cầu quyền).
+  - `GET /api/users/:id`: Lấy thông tin chi tiết người dùng theo ID (yêu cầu quyền).
 
-## Support
+- **Sản phẩm (`/api/products`)**
+  - `GET /api/products`: Lấy danh sách tất cả sản phẩm.
+  - `GET /api/products/:id`: Lấy thông tin sản phẩm theo ID.
+  - `POST /api/products`: Tạo sản phẩm mới.
+  - `PATCH /api/products/:id`: Cập nhật thông tin sản phẩm.
+  - `DELETE /api/products/:id`: Xóa sản phẩm.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **Địa điểm/Kho hàng (`/api/locations`)**
+  - `GET /api/locations`: Lấy danh sách tất cả địa điểm/kho hàng.
+  - `POST /api/locations`: Tạo địa điểm/kho hàng mới.
 
-## Stay in touch
+- **Phiếu nhập/xuất kho (`/api/stock-tickets`)**
+  - `GET /api/stock-tickets`: Lấy danh sách tất cả phiếu nhập/xuất kho.
+  - `POST /api/stock-tickets/import`: Tạo phiếu nhập kho.
+  - `POST /api/stock-tickets/export`: Tạo phiếu xuất kho.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- **Khách hàng (`/api/customers`)**
+  - `GET /api/customers`: Lấy danh sách tất cả khách hàng.
+  - `POST /api/customers`: Tạo khách hàng mới.
 
-## License
+- **Nhà cung cấp (`/api/suppliers`)**
+  - `GET /api/suppliers`: Lấy danh sách tất cả nhà cung cấp.
+  - `POST /api/suppliers`: Tạo nhà cung cấp mới.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Hóa đơn (`/api/invoices`)**
+  - `GET /api/invoices`: Lấy danh sách tất cả hóa đơn.
+  - `POST /api/invoices`: Tạo hóa đơn mới.
+
+- **Giao dịch tiền mặt (`/api/cash-transactions`)**
+  - `GET /api/cash-transactions`: Lấy danh sách tất cả giao dịch tiền mặt.
+  - `POST /api/cash-transactions`: Tạo giao dịch tiền mặt mới.
+
+- **Thông báo (`/api/notification`)**
+  - `GET /api/notification`: Lấy thông báo cho người dùng hiện tại.
+  - Kết nối WebSocket qua Socket.IO để nhận thông báo realtime.
+
+_(Lưu ý: Để truy cập các endpoint yêu cầu xác thực, bạn cần gửi JWT trong header `Authorization` với format `Bearer <token>`.)_
