@@ -11,7 +11,12 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://157.180.69.167'], // Cấu hình domain frontend của bạn
+    origin: [
+      'http://localhost:3000',
+      'http://95.217.10.120',
+      'https://caycuoc.com',
+      'https://www.caycuoc.com',
+    ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders:
